@@ -31,7 +31,8 @@
         "dist",
         "package.json",
         "CHANGELOG.md",
-        "README.md"
+        "README.md",
+        "README.en-US.md"
     ],
     "keywords": [
         "context",
