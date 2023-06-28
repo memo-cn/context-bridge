@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "workspaces": [
+    "context-bridge",
+    "demo"
+  ],
+  "license": "MIT"
+}

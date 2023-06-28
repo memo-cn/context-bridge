@@ -1,0 +1,58 @@
+{
+    "name": "context-bridge",
+    "private": false,
+    "version": "0.0.1",
+    "description": "上下文桥（Context Bridge）是一种支持不同 JavaScript 执行环境之间相互调用的机制。Context Bridge is a mechanism that enables different JavaScript execution environments to invoke each other.",
+    "homepage": "https://github.com/memo-cn/context-bridge",
+    "main": "./dist/context-bridge.common.js",
+    "module": "./dist/context-bridge.es.js",
+    "types": "./dist/context-bridge.es.d.ts",
+    "scripts": {
+        "sdk:dev": "rimraf ./dist && rollup -wc",
+        "sdk:build": "rimraf ./dist && rollup -c",
+        "sdk:clean": "rimraf ./dist",
+        "sdk:lint-check": "eslint . && prettier --check .",
+        "sdk:lint-fix": "eslint --fix . && prettier --write .",
+        "sdk:publish-to-npm": "npm run 'sdk:build' && if [[ -d ./dist ]]; then npm publish; else echo '请先编译出产物，再发包。'; fi"
+    },
+    "devDependencies": {
+        "@rollup/plugin-eslint": "^9.0.4",
+        "@rollup/plugin-typescript": "^11.1.2",
+        "@typescript-eslint/eslint-plugin": "^5.60.1",
+        "@typescript-eslint/parser": "^5.60.1",
+        "eslint": "^8.43.0",
+        "eslint-config-prettier": "^8.8.0",
+        "eslint-plugin-prettier": "^4.2.1",
+        "rimraf": "^5.0.1",
+        "rollup-plugin-dts": "^5.3.0",
+        "typescript": "^5.1.5"
+    },
+    "files": [
+        "dist",
+        "package.json",
+        "CHANGELOG.md",
+        "README.md"
+    ],
+    "keywords": [
+        "context",
+        "invoke",
+        "communication"
+    ],
+    "author": {
+        "name": "memo",
+        "email": "i@memo.cool"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:memo-cn/context-bridge.git"
+    },
+    "bugs": {
+        "email": "i@memo.cool",
+        "url": "https://github.com/memo-cn/context-bridge/issues"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org"
+    },
+    "license": "MIT"
+}
