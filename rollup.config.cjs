@@ -2,39 +2,20 @@ const ts = require('@rollup/plugin-typescript');
 const dts = require('rollup-plugin-dts').default;
 const pkg = require('./package.json');
 const eslint = require('@rollup/plugin-eslint');
+const babel = require('@rollup/plugin-babel');
 
-module.exports = [
-    {
-        input: './src/index.ts',
-        output: [
+const babelOutputPlugin = babel.getBabelOutputPlugin({
+    presets: [
+        [
+            '@babel/preset-env',
             {
-                format: 'es',
-                file: pkg.module,
-                sourcemap: true,
-            },
-            {
-                name: pkg.name,
-                format: 'umd',
-                file: pkg.main.replace(/\.common\.js$/, '.umd.js'),
-                sourcemap: true,
-            },
-            {
-                format: 'commonjs',
-                file: pkg.main,
-                sourcemap: true,
-            },
-            {
-                name: 'o',
-                banner: '(function (){\n',
-                footer: 'Object.assign(globalThis, o);\n})();',
-                format: 'iife',
-                extend: false,
-                file: pkg.main.replace(/\.common\.js$/, '.iife.js'),
-                sourcemap: true,
+                shippedProposals: true,
             },
         ],
-        plugins: [ts()],
-    },
+    ],
+});
+
+module.exports = [
     {
         input: './src/index.ts',
         output: [
@@ -49,6 +30,39 @@ module.exports = [
                 throwOnError: true,
                 throwOnWarning: false,
             }),
+        ],
+    },
+    {
+        plugins: [ts()],
+        input: './src/index.ts',
+        output: [
+            {
+                name: pkg.name,
+                format: 'umd',
+                file: pkg.main.replace(/\.common\.js$/, '.umd.js'),
+                sourcemap: true,
+            },
+            {
+                format: 'commonjs',
+                file: pkg.main,
+                sourcemap: true,
+                plugins: [babelOutputPlugin],
+            },
+            {
+                name: 'o',
+                banner: '(function (){\n',
+                footer: 'Object.assign(globalThis, o);\n})();',
+                format: 'iife',
+                extend: false,
+                file: pkg.main.replace(/\.common\.js$/, '.iife.js'),
+                sourcemap: true,
+            },
+            {
+                format: 'es',
+                file: pkg.module,
+                sourcemap: true,
+                plugins: [babelOutputPlugin],
+            },
         ],
     },
 ];
