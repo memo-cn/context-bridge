@@ -1,6 +1,6 @@
-import { createContextBridge } from '../../context-bridge/dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.js';
 
-const iframeBridge = (window.b = createContextBridge({
+const iframeBridge = createContextBridge({
     tag: 'iframe',
     logLevel: 'verbose',
     createChannel() {
@@ -14,7 +14,7 @@ const iframeBridge = (window.b = createContextBridge({
         });
         return channel;
     },
-}));
+});
 
 iframeBridge.on('sum', function () {
     let sum = 0;

@@ -1,10 +1,10 @@
-import { createContextBridge } from '../../context-bridge/dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.js';
 
-const workerBridge = (self.b = createContextBridge({
+const workerBridge = createContextBridge({
     tag: 'worker',
     logLevel: 'verbose',
     createChannel: () => self,
-}));
+});
 
 workerBridge.on('sum', function () {
     let sum = 0;

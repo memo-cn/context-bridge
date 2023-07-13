@@ -1,6 +1,6 @@
-import { createContextBridge } from '../../context-bridge/dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.js';
 
-const bridge = window.a = createContextBridge({
+const bridge = createContextBridge({
     tag: 'main page',
     logLevel: 'verbose',
     createChannel: () => new BroadcastChannel('bc'),

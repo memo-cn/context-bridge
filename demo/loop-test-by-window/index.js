@@ -1,9 +1,9 @@
 import { createContextBridge } from '../../dist/context-bridge.es.js';
 
-const bridge = createContextBridge({
-    tag: 'background page',
+var bridge = createContextBridge({
+    tag: 'bridge1',
     logLevel: 'verbose',
-    createChannel: () => new BroadcastChannel('bc'),
+    createChannel: () => window,
 });
 
 bridge.on('sum', function () {
@@ -16,3 +16,6 @@ bridge.on('sum', function () {
     }
     return sum;
 });
+
+console.log('1 + 2 =', await bridge.invoke('sum', 1, 2));
+console.log('5 + x =', await bridge.invoke('sum', 5, 'x'));

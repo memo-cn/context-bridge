@@ -1,10 +1,10 @@
-import { createContextBridge } from '../../context-bridge/dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.js';
 
-const mainBridge = (window.a = createContextBridge({
+const mainBridge = createContextBridge({
     tag: 'main',
     logLevel: 'verbose',
-    createChannel: () => (window.w = new Worker('./worker.js', { type: 'module' })),
-}));
+    createChannel: () => new Worker('./worker.js', { type: 'module' }),
+});
 
 console.log('1 + 2 =', await mainBridge.invoke('sum', 1, 2));
 

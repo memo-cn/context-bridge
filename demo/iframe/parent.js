@@ -1,8 +1,8 @@
-import { createContextBridge } from '../../context-bridge/dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.js';
 
 var contentWindow = document.querySelector('iframe').contentWindow;
 
-const parentBridge = (window.a = createContextBridge({
+const parentBridge = createContextBridge({
     tag: 'main',
     logLevel: 'verbose',
     createChannel() {
@@ -25,7 +25,7 @@ const parentBridge = (window.a = createContextBridge({
             console.log(JSON.stringify(entry, null, 2));
         }
     },
-}));
+});
 
 console.log('1 + 2 =', await parentBridge.invoke('sum', 1, 2));
 

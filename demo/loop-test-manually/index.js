@@ -1,28 +1,28 @@
-import {createContextBridge} from '../../context-bridge/dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.js';
 
 var channel1 = {
     postMessage(data) {
-        channel2?.onmessage?.({data});
+        channel2?.onmessage?.({ data });
     },
 };
 
 var channel2 = {
     postMessage(data) {
-        channel1?.onmessage?.({data});
+        channel1?.onmessage?.({ data });
     },
 };
 
-var bridge1 = window.a = createContextBridge({
+var bridge1 = (window.a = createContextBridge({
     tag: 'bridge1',
     logLevel: 'verbose',
     createChannel: () => channel1,
-});
+}));
 
-var bridge2 = window.b = createContextBridge({
+var bridge2 = (window.b = createContextBridge({
     tag: 'bridge2',
     logLevel: 'verbose',
     createChannel: () => channel2,
-});
+}));
 
 bridge1.on('sum', function () {
     let sum = 0;

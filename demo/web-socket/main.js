@@ -1,4 +1,4 @@
-const { createContextBridge } = require('context-bridge');
+const { createContextBridge } = require('../../dist/context-bridge.common.js');
 
 process.on('uncaughtException', (err) => {
     console.error(err);
