@@ -194,6 +194,16 @@ webSocketServer.on('connection', function (serverSocket, incomingMessage) {
 });
 ```
 
+### 回环测试
+
+可以直接将 window 作为信道, 创建上下文桥, 进行回环测试。
+
+```typescript
+var bridge = createContextBridge({
+    createChannel: () => window,
+});
+```
+
 ## API 列表
 
 ### createContextBridge()

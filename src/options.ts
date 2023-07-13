@@ -100,14 +100,14 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
     /**
      * 建连的超时时间
      * @description 如果超过此时间没有建连完成，建连动作失败；
-     * 单位为毫秒。默认为 5 秒。设为 0 或 Infinity 时不限制建连时长。
+     * 单位为毫秒。默认为 5 秒。设为 0, null, undefined 或 Infinity 时不限制建连时长。
      */
     connectionTimeout?: number | null;
 
     /**
      * 函数调用的超时时间
      * @description 如果超过此时间没有响应结果，调用失败，信道也会被重启。
-     * 单位为毫秒。默认为 5 秒。设为 0 或 Infinity 时无限制。
+     * 单位为毫秒。默认为 5 秒。设为 0, null, undefined 或 Infinity 时不限制调用时长。
      */
     invokeTimeout?: number | null;
 

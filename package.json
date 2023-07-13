@@ -1,7 +1,7 @@
 {
     "name": "context-bridge",
     "private": false,
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "上下文桥（Context Bridge）是一种支持不同 JavaScript 执行环境之间相互调用的机制。Context Bridge is a mechanism that enables different JavaScript execution environments to invoke each other.",
     "homepage": "https://github.com/memo-cn/context-bridge",
     "main": "./dist/context-bridge.common.js",
@@ -14,6 +14,7 @@
         "sdk:lint-check": "eslint . && prettier --check .",
         "sdk:lint-fix": "eslint --fix . && prettier --write .",
         "sdk:publish-to-npm": "npm run 'sdk:build' && if [[ -d ./dist ]]; then npm publish; else echo '请先编译出产物，再发包。'; fi",
+        "sdk:install-to-path": "bash scripts/install-to-path.sh",
         "demo:serve": "serve .",
         "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js"
     },
