@@ -1,18 +1,33 @@
 import type { JSONError } from './utils';
 import { InvokeEntry } from '@/performance';
+
+// 命名空间信息
+export const ns = { name: '__context-bridge', version: '0.0.2' } as const;
+
+// 是否为对象
 export function isObject(arg: any): arg is Record<any, any> {
     return Object(arg) === arg;
 }
 
+// 是否为消息
+function isMessage(arg: any): arg is ContextBridgeMessage & Record<any, any> {
+    if (!isObject(arg)) return false;
+    return ns.name in arg; // && ns.version === arg[ns.name];
+}
+
+export type ContextBridgeMessage = {
+    [K in typeof ns.name]: typeof ns.version;
+};
+
 // 调用函数
-export interface Call {
+export interface Call extends ContextBridgeMessage {
     id: any;
     call: string; // 调用的函数名
     args: any[]; // 调用参数
 }
 
 // 返回结果
-export interface Return {
+export interface Return extends ContextBridgeMessage {
     id: any;
     /**
      * return 和 throw 字段二选一, 存在 throw 字段时, 也应存在 reason 字段
@@ -24,7 +39,7 @@ export interface Return {
 }
 
 // 连接通知
-export interface ConnectionNotification {
+export interface ConnectionNotification extends ContextBridgeMessage {
     // 标识
     tag: any;
     // 轮次
@@ -32,7 +47,7 @@ export interface ConnectionNotification {
 }
 
 export function isConnectionNotification(data: any): data is ConnectionNotification {
-    if (!isObject(data)) return false;
+    if (!isMessage(data)) return false;
     if (typeof data.round !== 'number') {
         return false;
     }
@@ -43,7 +58,7 @@ export function isConnectionNotification(data: any): data is ConnectionNotificat
 }
 
 export function isCall(data: any): data is Call {
-    if (!isObject(data)) return false;
+    if (!isMessage(data)) return false;
     if ('id' in data && 'call' in data && 'args' in data) {
         return true;
     }
@@ -54,6 +69,6 @@ export function isCall(data: any): data is Call {
 }
 
 export function isReturn(data: any): data is Return {
-    if (!isObject(data)) return false;
+    if (!isMessage(data)) return false;
     return 'id' in data && ('return' in data || 'throw' in data);
 }

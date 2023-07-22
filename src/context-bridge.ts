@@ -270,6 +270,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             responseDuration: 0,
             call: name,
             result: null!,
+            [Message.ns.name]: Message.ns.version,
         };
 
         try {
@@ -293,6 +294,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             id,
             call: name,
             args,
+            [Message.ns.name]: Message.ns.version,
         };
 
         // 发送任务
@@ -479,6 +481,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             startTime: Date.now(),
             duration: 0,
             result: null!,
+            [Message.ns.name]: Message.ns.version,
         };
 
         // 获取新信道
@@ -555,6 +558,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 const m: Message.ConnectionNotification = {
                     tag: localTag,
                     round: operationRound,
+                    [Message.ns.name]: Message.ns.version,
                 };
                 channel.postMessage(m);
             } catch (e) {
@@ -682,6 +686,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 id: data.id,
                 return: return_,
                 executionDuration: endTime - startTime,
+                [Message.ns.name]: Message.ns.version,
             };
             if (throw_) {
                 r_.throw = error2JSON(throw_);
@@ -703,6 +708,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     responseDuration,
                     call: invokeInfo.funName,
                     result: 'success',
+                    [Message.ns.name]: Message.ns.version,
                 };
 
                 if (data.throw) {

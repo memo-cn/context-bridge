@@ -1,10 +1,11 @@
 import { JSONError } from './utils';
+import { ContextBridgeMessage } from '@/message';
 
 /** 性能条目 */
 export type ContextBridgePerformanceEntry = ConnectionEntry | InvokeEntry;
 
 /** 建连条目 */
-export type ConnectionEntry = {
+export interface ConnectionEntry extends ContextBridgeMessage {
     tag: string /** 上下文标识 */;
     entryType: 'connection' /** 条目类型，表示建连 */;
     startTime: number /** 开始建连的时间戳，单位为毫秒 */;
@@ -17,10 +18,10 @@ export type ConnectionEntry = {
         | 'channel creation failed' /** 信道创建失败 */
         | 'message sending failed' /** 消息发送失败 */;
     error?: JSONError /* 发生错误时, 对错误信息进行记录 */;
-};
+}
 
 /** 调用条目 */
-export type InvokeEntry = {
+export interface InvokeEntry extends ContextBridgeMessage {
     tag: string /** 上下文标识 */;
     entryType: 'invoke' /** 条目类型，表示函数调用 */;
     startTime: number /** 开始调用的时间戳，单位为毫秒 */;
@@ -36,4 +37,4 @@ export type InvokeEntry = {
         | 'function execution error' /** 函数执行报错 */
         | 'function not subscribed' /** 函数未被订阅 */;
     error?: JSONError; // 发生错误时, 对错误信息进行记录
-};
+}
