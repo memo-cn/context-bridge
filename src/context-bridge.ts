@@ -9,6 +9,12 @@ interface MessageEvent {
     data: any;
 }
 
+// 记录 正在被使用的信道实例 及其 对应的操作轮次。一个信道不能同时被多个上下文桥使用。
+const channel2OperationRound = new WeakMap<ContextBridgeChannel, number>();
+
+// 操作轮次（进入 operateChannel 函数的次数），每个上下文都是唯一的。
+let operationRound = 0;
+
 /**
  * 创建 上下文桥
  */
@@ -425,8 +431,6 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
     }
 
-    // 进入 operateChannel 函数的次数
-    let operationRound = 0;
     /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「结束」资源 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
 
     /**
@@ -455,7 +459,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             readyTimePromiseResolve = resolve;
             readyTimePromiseReject = reject;
         });
-        // 如果不处理, 控制台会报错。
+        // 避免在关闭信道时，上面的 Promise 被拒绝但没有 onrejected 而导致控制台报错。
         readyTimePromise.then(
             () => {},
             () => {},
@@ -474,6 +478,28 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             return;
         }
 
+        readyTimePromise
+            .then(
+                (readyTime) => {
+                    connectionEntry.duration = readyTime - connectionEntry.startTime;
+                    connectionEntry.result = 'success';
+                    Log.v(`建连#${operationRound}(${reason})成功, 耗时`, connectionEntry.duration, '毫秒。');
+                    setChannelState('open', reason);
+                },
+                (reason) => {
+                    connectionEntry.duration = Date.now() - connectionEntry.startTime;
+                    connectionEntry.result = 'failure';
+                    Log.e(reason);
+                    setChannelState('closed', reason);
+                    if (connectionEntry.reason === 'timeout' && reloadChannelOnConnectionTimeout) {
+                        instance.reloadChannel(`建连#${operationRound}超时未完成, 自动重启信道`);
+                    }
+                },
+            )
+            .finally(() => {
+                contextBridgePerformanceEntries.push(connectionEntry);
+            });
+
         // 建连条目
         const connectionEntry: ConnectionEntry = {
             tag: localTag,
@@ -488,10 +514,19 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         try {
             const newChannel = await options.createChannel();
             checkChannel(newChannel);
+
+            if (channel2OperationRound.has(newChannel)) {
+                throw new Error(
+                    `channel(${newChannel}) 正在被其他上下文桥#${channel2OperationRound.get(newChannel)}使用。`,
+                );
+            }
+            channel2OperationRound.set(newChannel, operationRound);
+
             channel = newChannel;
 
             // 内部析构时需要回调外部的析构函数
             innerDisposeTasks.push(() => {
+                channel2OperationRound.delete(channel);
                 if (typeof options.onChannelClose === 'function') {
                     options.onChannelClose(newChannel);
                 }
@@ -502,7 +537,6 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 connectionEntry.reason = 'channel creation failed';
                 connectionEntry.error = error2JSON(e);
             }
-            Log.e(e);
             return;
         }
 
@@ -598,36 +632,14 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             }
         }
 
-        readyTimePromise
-            .then(
-                (readyTime) => {
-                    connectionEntry.duration = readyTime - connectionEntry.startTime;
-                    connectionEntry.result = 'success';
-                    Log.v(`建连#${operationRound}(${reason})成功, 耗时`, connectionEntry.duration, '毫秒。');
-                    setChannelState('open', reason);
-                },
-                (reason) => {
-                    connectionEntry.duration = Date.now() - connectionEntry.startTime;
-                    connectionEntry.result = 'failure';
-                    Log.e(reason);
-                    setChannelState('closed', reason);
-                    if (connectionEntry.reason === 'timeout' && reloadChannelOnConnectionTimeout) {
-                        instance.reloadChannel(`建连#${operationRound}超时未完成, 自动重启信道`);
-                    }
-                },
-            )
-            .finally(() => {
-                contextBridgePerformanceEntries.push(connectionEntry);
-            });
         // ····················「结束」建连 ····················
 
+        // 处理消息
         messageEventHandlerList.push(onMessage);
 
-        // 处理消息
-
-        const originalOnmessage = channel.onmessage;
+        const originalOnMessage = channel.onmessage;
         innerDisposeTasks.push(() => {
-            channel.onmessage = originalOnmessage;
+            channel.onmessage = originalOnMessage;
         });
 
         channel.onmessage = function (ev: MessageEvent) {
@@ -642,9 +654,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     }
                 });
 
-                if (typeof originalOnmessage === 'function') {
+                // 如果存在原监听器, 对其进行调用。
+                if (typeof originalOnMessage === 'function') {
                     try {
-                        Reflect.apply(originalOnmessage, channel, args);
+                        Reflect.apply(originalOnMessage, channel, args);
                     } catch (e) {
                         Log.e(e);
                     }
@@ -654,7 +667,19 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     }
 
     async function onMessage(ev: MessageEvent) {
-        const data = ev.data;
+        const data = ev?.data;
+
+        // 一条消息, 只能被处理一次
+        if (Message.isMessage(data as any)) {
+            if (Message.isConsumed(data)) {
+                Log.w('多个上下文实例间接共用同一个信道; 忽略已被消费的消息:', ev);
+            } else {
+                Message.markAsConsumed(data);
+            }
+        } else {
+            Log.v('忽略未知类型的消息:', ev);
+            return;
+        }
 
         if (Message.isCall(data)) {
             const fun = name2function.get(String(data.call));
@@ -732,7 +757,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
                 contextBridgePerformanceEntries.push(callEntry);
             } else {
-                Log.w(`Return id=${data.id} 没有对应的 Call.`, ev.data);
+                Log.w(`多个上下文实例间接共用同一个信道; Return id=${data.id} 没有对应的 Call.`, ev);
             }
         } else if (Message.isConnectionNotification(data)) {
             if (data.round > remoteRound) {
@@ -741,8 +766,6 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     instance.reloadChannel('被动重新建连');
                 }
             }
-        } else {
-            Log.w('未知类型的消息:', ev);
         }
     }
 

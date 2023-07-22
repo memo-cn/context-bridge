@@ -9,8 +9,21 @@ export function isObject(arg: any): arg is Record<any, any> {
     return Object(arg) === arg;
 }
 
+// 记录被消费的消息
+const consumedMessage = new WeakSet<ContextBridgeMessage>();
+
+// 判断消息是否已被消费
+export function isConsumed(msg: ContextBridgeMessage): boolean {
+    return consumedMessage.has(msg);
+}
+
+// 标记消息已被消费
+export function markAsConsumed(msg: ContextBridgeMessage) {
+    consumedMessage.add(msg);
+}
+
 // 是否为消息
-function isMessage(arg: any): arg is ContextBridgeMessage & Record<any, any> {
+export function isMessage(arg: any): arg is ContextBridgeMessage & Record<any, any> {
     if (!isObject(arg)) return false;
     return ns.name in arg; // && ns.version === arg[ns.name];
 }
