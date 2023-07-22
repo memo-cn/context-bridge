@@ -1,5 +1,5 @@
 import { JSONError } from './utils';
-import { ContextBridgeMessage } from '@/message';
+import { ContextBridgeMessage } from './message';
 
 /** 性能条目 */
 export type ContextBridgePerformanceEntry = ConnectionEntry | InvokeEntry;

@@ -295,7 +295,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         if (id === Number.MAX_SAFE_INTEGER) {
             id = invokeIdCount = 0;
         }
-        Log.v(`开始调用#${id}`, name);
+        Log.v(`开始调用$${id}`, name);
         const m: Message.Call = {
             id,
             call: name,
@@ -692,19 +692,19 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 const message = zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call);
                 throw_ = new Error(`[${localTag}] ` + message);
                 reason = 'function not subscribed';
-                Log.e(`结束执行#${data.id}`, data.call + ',', '报错', message);
+                Log.e(`结束执行$${data.id}`, data.call + ',', '报错', message);
             } else {
                 try {
-                    Log.v(`开始执行#${data.id}`, data.call);
+                    Log.v(`开始执行$${data.id}`, data.call);
                     startTime = Date.now();
                     return_ = await Reflect.apply(fun, null, data.args);
                     endTime = Date.now();
-                    Log.v(`结束执行#${data.id}`, data.call + ',', '耗时', endTime - startTime, '毫秒。');
+                    Log.v(`结束执行$${data.id}`, data.call + ',', '耗时', endTime - startTime, '毫秒。');
                 } catch (e: any) {
                     endTime = Date.now();
                     throw_ = e;
                     reason = 'function execution error';
-                    Log.e(`结束执行#${data.id}`, data.call + ',', '报错', e);
+                    Log.e(`结束执行$${data.id}`, data.call + ',', '报错', e);
                 }
             }
             const r_: Message.Return = {
@@ -722,7 +722,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             const invokeInfo = id2invokeInfo.get(data.id);
             if (invokeInfo) {
                 const responseDuration = Date.now() - invokeInfo.createdTime;
-                Log.v(`结束调用#${data.id}`, invokeInfo.funName + ',', '耗时', responseDuration, '毫秒。');
+                Log.v(`结束调用$${data.id}`, invokeInfo.funName + ',', '耗时', responseDuration, '毫秒。');
                 id2invokeInfo.delete(data.id);
 
                 const callEntry: InvokeEntry = {
