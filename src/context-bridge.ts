@@ -814,6 +814,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         invoke,
         invokeWithDetail,
 
+        get isInvoking() {
+            return id2invokeInfo.size === 0;
+        },
+
         getPerformanceEntries() {
             return contextBridgePerformanceEntries.map((e) => Object.assign({}, e));
         },

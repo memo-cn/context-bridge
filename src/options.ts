@@ -11,7 +11,7 @@ export enum LogLevel {
 }
 
 /**
- * 上下文桥 信道
+ * **上下文桥 信道**
  * <hr/>
  * @description 当两个执行环境需要通过网络进行通信时，可以使用 WebSocket 作为信道，创建上下文桥。
  *
@@ -62,32 +62,33 @@ export type ChannelState = 'connecting' /** 连接中 */ | 'open' /** 已打开 
 /** 上下文桥 选项 */
 export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
     /**
-     * 上下文标识
-     * @description 在控制台打印的日志会有上下文的标识前缀，以便区分不同的上下文桥实例。
+     * **上下文标识**
+     * @description 在控制台打印的日志会带有上下文标识的前缀和颜色，以便区分不同的上下文桥实例。
      */
     tag?: string;
 
     /**
-     * 日志级别
-     * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。
+     * **日志级别**
+     * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'verbose' | 'warning' | 'error' 。
      */
     logLevel?: keyof typeof LogLevel;
 
     /**
-     * 信道工厂函数
+     * **信道工厂函数**
      * @description 建连需要创建信道，会调用此函数。
+     * @returns 期望返回一个实现信道接口的实例或一个 Promise 对象。
      */
     createChannel: () => C | Promise<C>;
 
     /**
-     * 信道关闭时的回调函数
+     * **信道关闭时的回调函数**
      * @param channel 旧的信道实例
-     * @description 创建下一个信道实例时，此函数会被回调。你可以做必要的资源释放。
+     * @description 此函数会在信道关闭或重启时调用。你可以用它来释放或清理资源。
      */
     onChannelClose?: (channel: C) => void;
 
     /**
-     * 信道状态发生改变的回调函数
+     * **信道状态发生改变的回调函数**
      * @param newChannelState
      * @example
      *
@@ -98,35 +99,35 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
     onChannelStateChange?: (to: ChannelState, from: ChannelState) => void;
 
     /**
-     * 建连的超时时间
+     * **建连的超时时间**
      * @description 如果超过此时间没有建连完成，建连动作失败。
-     * 单位为毫秒。默认为 5 秒。设为 0, null, undefined 或 Infinity 时不限制建连时长。
+     * 以毫秒为单位，默认为 5 秒。如果为 0, null, undefined 或 Infinity 则不限制建连时长。
      */
     connectionTimeout?: number | null;
 
     /**
-     * 函数调用的超时时间
+     * **函数调用的超时时间**
      * @description 如果超过此时间没有响应结果，调用失败。
-     * 单位为毫秒。默认为 5 秒。设为 0, null, undefined 或 Infinity 时不限制调用时长。
+     * 以毫秒为单位，默认为 5 秒。如果为 0, null, undefined 或 Infinity 则不限制调用时长。
      */
     invokeTimeout?: number | null;
 
     /**
-     * 建连失败时是否重试
+     * **建连失败时是否重试**
      * @default true 默认是。
-     * @description 重试间隔不会小于 1 秒。
+     * @description 内部会限制重试间隔最小为 1 秒。
      */
     reloadChannelOnConnectionFailure?: boolean | null;
 
     /**
-     * 函数调用超时时是否自动重启信道
+     * **函数调用超时时是否自动重启信道**
      * @default true 默认是。
      * @description 仅在函数调用有超时限制时有效。
      */
     reloadChannelOnInvokeTimeout?: boolean | null;
 
     /**
-     * 当有新的性能指标产生时触发的回调函数
+     * **当有新的性能指标产生时触发的回调函数**
      * @param entry 性能指标。
      */
     onPerformanceEntry?: (entry: ContextBridgePerformanceEntry) => void;

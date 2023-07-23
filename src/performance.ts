@@ -8,7 +8,7 @@ export type ContextBridgePerformanceEntry = ConnectionEntry | InvokeEntry;
 export interface ConnectionEntry extends ContextBridgeMessage {
     tag: string /** 上下文标识 */;
     entryType: 'connection' /** 指标类型，表示建连 */;
-    startTime: number /** 开始建连的时间戳，单位为毫秒 */;
+    startTime: number /** 开始建立连接的时间戳，单位为毫秒 */;
     duration: number /** 建连耗时，单位为毫秒 */;
     result: 'success' | 'failure' /** 建连结果 */;
     /** 建连失败的原因，只在失败时存在 */
