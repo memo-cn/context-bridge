@@ -210,18 +210,15 @@ var bridge = createContextBridge({
 
 ## API 列表
 
-### 创建上下文桥（createContextBridge）
+createContextBridge 方法创建一个上下文桥实例。它接受一个上下文桥选项作为构造参数，返回一个上下文桥实例。
 
-createContextBridge 方法用于创建一个上下文桥实例。参数为一个上下文桥选项 `ContextBridgeOptions`,
-返回创建的上下文桥实例 `ContextBridgeInstance`。
+### 选项（Options）
 
-### 上下文桥构造选项（Context Bridge Options）
-
-上下文桥选项是一个对象，包含以下属性：
+上下文桥构造选项是一个对象，有以下属性：
 
 #### tag
 
-上下文标识。在控制台打印的日志会有上下文标识前缀和颜色，以便区分不同的上下文桥实例。
+上下文标识。在控制台打印的日志会带有上下文标识的前缀和颜色，以便区分不同的上下文桥实例。
 
 #### logLevel
 
@@ -239,11 +236,11 @@ createContextBridge 方法用于创建一个上下文桥实例。参数为一个
 
 信道状态发生改变的回调函数。
 
-| 信道事件          | 	状态变化                             |
-|---------------|-----------------------------------|
-| 初始化 或 关闭时重启信道 | 	'closed' → 'connecting' → 'open' |  	
-| 打开时关闭信道       | 	'open' → 'closed'  	             |
-| 打开时重启信道  	    | 'open' → 'connecting' → 'open'    |
+| 信道事件                 | 状态变化                         |
+| ------------------------ | -------------------------------- |
+| 初始化 或 关闭时重启信道 | 'closed' → 'connecting' → 'open' |
+| 打开时关闭信道           | 'open' → 'closed'                |
+| 打开时重启信道           | 'open' → 'connecting' → 'open'   |
 
 #### connectionTimeout
 
@@ -263,15 +260,15 @@ createContextBridge 方法用于创建一个上下文桥实例。参数为一个
 
 #### onPerformanceEntry
 
-当有新的性能条目产生时触发的回调函数。
+当有新的性能指标产生时触发的回调函数。
 
-### 上下文桥实例属性（Context Bridge Instance）
+### 实例（Instance）
 
 上下文桥实例是一个对象，包含以下属性和方法：
 
 #### on
 
-方法，用于订阅或注册函数。接收两个参数，分别是函数名和函数实现。函数订阅与信道连接没有关联。可以在创建上下文桥实例后的任意时刻，在任何信道状态下，订阅函数。信道关闭或重启也不会导致已订阅的函数丢失。
+方法，用于订阅或注册函数。接收一个函数名和一个函数实现作为参数。函数订阅与信道连接没有关联。可以在创建上下文桥实例后的任意时刻，在任何信道状态下，订阅函数。信道关闭或重启也不会导致已订阅的函数丢失。
 
 #### off
 
@@ -280,8 +277,7 @@ createContextBridge 方法用于创建一个上下文桥实例。参数为一个
 #### invoke
 
 方法，用于调用在另一个执行上下文订阅的函数。
-第一个参数可以是字符串，表示要调用的函数名；后面的参数是要传递给被调用函数的参数列表。返回一个兑现值为调用结果的 Promise
-对象。
+第一个参数可以是字符串，表示要调用的函数名；后面的参数是要传递给被调用函数的参数列表。返回一个以调用结果为值的 Promise 对象。
 
 #### invokeWithDetail
 
@@ -289,7 +285,7 @@ createContextBridge 方法用于创建一个上下文桥实例。参数为一个
 
 #### getPerformanceEntries
 
-方法，用于手动获取性能条目列表。
+方法，用于手动获取性能指标列表。
 
 #### channelState
 
@@ -307,67 +303,65 @@ createContextBridge 方法用于创建一个上下文桥实例。参数为一个
 
 方法，用于手动关闭信道。接收一个可选的参数，表示关闭的原因。信道被手动关闭后, 不会再处理收到的消息, 只能手动重启。
 
-### 上下文桥性能条目（Context Bridge Performance Entry）
+### 性能指标（Performance Entry）
 
-性能指标是一个对象，表示上下文桥中发生的一些事件的性能信息。有两种类型的性能指标：连接指标（Connection Entry）和调用指标（Invoke Entry）。
+性能指标是一个对象，反映上下文桥中发生的事件的性能信息。有两种类型的性能指标：连接指标（Connection Entry）和调用指标（Invoke Entry）。
 
-#### 建连条目（Connection Entry）
+#### 连接指标（Connection Entry）
 
-连接指标是一个对象，表示上下文桥建立连接时的性能信息。
+连接指标是一个对象，反映上下文桥建立连接时的性能信息。
 
-| 属性        | 类型                     | 含义               |
-|-----------|------------------------|------------------|
-| tag       | string                 | 上下文标识            |
-| entryType | 'connection'           | 条目类型，表示建连        |
-| startTime | number                 | 开始建连的时间戳         |
-| duration  | number                 | 建连耗时             |
-| result    | 'success' \| 'failure' | 建连结果             |
-| reason    |                        | 建连失败的原因          |
+| 属性      | 类型                   | 含义                           |
+| --------- | ---------------------- | ------------------------------ |
+| tag       | string                 | 上下文标识                     |
+| entryType | 'connection'           | 指标类型，表示建连             |
+| startTime | number                 | 开始建连的时间戳               |
+| duration  | number                 | 建连耗时                       |
+| result    | 'success' \| 'failure' | 建连结果                       |
+| reason    |                        | 建连失败的原因                 |
 | error     |                        | 发生错误时, 对错误信息进行记录 |
 
 当 result 为 'failure' 时, 有 reason 和 error 属性。
 
 reason 在连接指标中的可能取值有:
 
-| 类型                        | 含义        |
-|---------------------------|-----------|
+| 类型                      | 含义               |
+| ------------------------- | ------------------ |
 | 'timeout'                 | 建立任务超时未完结 |
-| 'connection cancelled'    | 建连任务被取消   |
-| 'channel creation failed' | 信道创建失败    |
-| 'message sending failed'  | 消息发送失败    |
+| 'connection cancelled'    | 建连任务被取消     |
+| 'channel creation failed' | 信道创建失败       |
+| 'message sending failed'  | 消息发送失败       |
 
 error 的属性有:
 
-| 属性      | 类型     | 含义 |
-|---------|--------|----|
+| 属性    | 类型   | 含义 |
+| ------- | ------ | ---- |
 | name    | string | 名称 |
 | message | string | 信息 |
 | stack   | string | 堆栈 |
 
-#### 调用条目（Invoke Entry）
+#### 调用指标（Invoke Entry）
 
-调用指标是一个对象，表示上下文桥调用函数时的性能信息。
+调用指标是一个对象，反映上下文桥调用函数时的性能信息。
 
-| 属性                | 类型                     | 含义               |
-|-------------------|------------------------|------------------|
-| tag               | string                 | 上下文标识            |
-| entryType         | 'invoke'               | 条目类型，表示函数调用      |
-| startTime         | number                 | 开始调用的时间戳         |
-| executionDuration | number                 | 执行耗时             |
-| responseDuration  | number                 | 响应耗时             |
-| call              | string                 | 调用的函数名称          |
-| result            | 'success' \| 'failure' | 调用结果             |
-| reason            |                        | 调用失败的原因          |
+| 属性              | 类型                   | 含义                           |
+| ----------------- | ---------------------- | ------------------------------ |
+| tag               | string                 | 上下文标识                     |
+| entryType         | 'invoke'               | 指标类型，表示函数调用         |
+| startTime         | number                 | 开始调用的时间戳               |
+| executionDuration | number                 | 执行耗时                       |
+| responseDuration  | number                 | 响应耗时                       |
+| call              | string                 | 调用的函数名称                 |
+| result            | 'success' \| 'failure' | 调用结果                       |
+| reason            |                        | 调用失败的原因                 |
 | error             |                        | 发生错误时, 对错误信息进行记录 |
 
 reason 在调用指标中的可能取值有:
 
-| 类型                         | 含义        |
-|----------------------------|-----------|
+| 类型                       | 含义               |
+| -------------------------- | ------------------ |
 | 'timeout'                  | 调用任务超时未完结 |
-| 'invoke cancelled'         | 调用任务被取消   |
-| 'message sending failed'   | 消息发送失败    |
-| 'function execution error' | 函数执行报错    |
-| 'function not subscribed'  | 函数未被订阅    |
-
-
+| 'invoke cancelled'         | 调用任务被取消     |
+| 'message sending failed'   | 消息发送失败       |
+| 'function execution error' | 函数执行报错       |
+| 'function not subscribed'  | 函数未被订阅       |

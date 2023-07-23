@@ -1,13 +1,13 @@
 import { JSONError } from './utils';
 import type { ContextBridgeMessage } from './message';
 
-/** 性能条目 */
+/** 性能指标 */
 export type ContextBridgePerformanceEntry = ConnectionEntry | InvokeEntry;
 
-/** 建连条目 */
+/** 连接指标 */
 export interface ConnectionEntry extends ContextBridgeMessage {
     tag: string /** 上下文标识 */;
-    entryType: 'connection' /** 条目类型，表示建连 */;
+    entryType: 'connection' /** 指标类型，表示建连 */;
     startTime: number /** 开始建连的时间戳，单位为毫秒 */;
     duration: number /** 建连耗时，单位为毫秒 */;
     result: 'success' | 'failure' /** 建连结果 */;
@@ -20,10 +20,10 @@ export interface ConnectionEntry extends ContextBridgeMessage {
     error?: JSONError /* 发生错误时, 对错误信息进行记录 */;
 }
 
-/** 调用条目 */
+/** 调用指标 */
 export interface InvokeEntry extends ContextBridgeMessage {
     tag: string /** 上下文标识 */;
-    entryType: 'invoke' /** 条目类型，表示函数调用 */;
+    entryType: 'invoke' /** 指标类型，表示函数调用 */;
     startTime: number /** 开始调用的时间戳，单位为毫秒 */;
     executionDuration: number /** 执行耗时 */;
     responseDuration: number /** 响应耗时 */;

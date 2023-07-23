@@ -37,7 +37,7 @@ export type ContextBridgeInstance = {
      * */
     invokeWithDetail: InvokeWithDetail;
 
-    /** 手动获取性能条目。 */
+    /** 手动获取性能指标。 */
     getPerformanceEntries: () => ContextBridgePerformanceEntry[];
 
     /** 当前的信道状态 */

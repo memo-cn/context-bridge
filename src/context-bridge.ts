@@ -70,7 +70,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     // 函数调用超时时是否重启信道
     let reloadChannelOnInvokeTimeout = true;
 
-    // 当有新的性能条目产生时触发的回调方法
+    // 当有新的性能指标产生时触发的回调方法
     let onPerformanceEntry: (entries: ContextBridgePerformanceEntry) => void = function () {};
 
     /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「结束」选项数据 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
@@ -269,7 +269,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         name: string,
         ...args: any[]
     ): Promise<DetailedInvokeResult<ReturnType<Awaited<RemoteFunction>>>> {
-        // 调用条目
+        // 调用指标
         const invokeEntry: InvokeEntry = {
             tag: localTag,
             entryType: 'invoke',
@@ -511,7 +511,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 contextBridgePerformanceEntries.push(connectionEntry);
             });
 
-        // 建连条目
+        // 建连指标
         const connectionEntry: ConnectionEntry = {
             tag: localTag,
             entryType: 'connection',

@@ -126,8 +126,8 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
     reloadChannelOnInvokeTimeout?: boolean | null;
 
     /**
-     * 当有新的性能条目产生时触发的回调函数
-     * @param entry 性能条目。
+     * 当有新的性能指标产生时触发的回调函数
+     * @param entry 性能指标。
      */
     onPerformanceEntry?: (entry: ContextBridgePerformanceEntry) => void;
 };
