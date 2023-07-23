@@ -4,7 +4,7 @@
 
 上下文桥（Context Bridge）是一种支持不同 JavaScript 执行环境之间相互调用的跨上下文通信机制，包括跨线程、跨窗口、跨网络等场景。
 
-## 快速上手
+## 快速开始
 
 ### 安装
 
@@ -80,14 +80,14 @@ declare function sqrt(num: number): number;
 var res = bridge.invoke<typeof sqrt>('sqrt', 9);
 ```
 
-## 适用场景
+## 支持场景
 
 如果能在不同 JavaScript 执行环境内相互获取到对方上下文对象的引用，或者在一个环境内能访问到与另一个环境通信的接口，即
 onmessage 方法和支持结构化克隆算法的 postMessage 方法，那么就可以通过上下文桥实现不同执行环境中函数的相互调用。
 
 ### 后台线程（Worker）
 
-在快速上手章节，你已经看到主线程和 Worker 线程之间可以通过上下文桥进行相互调用。
+在快速开始章节，你已经看到主线程和 Worker 线程之间可以通过上下文桥进行相互调用。
 
 接下来，我将再举一些常见的例子，展示如何在更多的场景中获取或创建信道，以便创建上下文桥。
 
@@ -194,7 +194,7 @@ webSocketServer.on('connection', function(serverSocket, incomingMessage) {
 });
 ```
 
-## 最佳实践
+## 进阶技巧
 
 ### 回环测试
 
@@ -207,6 +207,45 @@ var bridge = createContextBridge({
 ```
 
 ### 组合实例
+
+#### 一主多从
+
+如果需要在一个执行环境中与多个幂等的执行环境通信，例如主线程与多个 Worker 线程，你可以使用组合实例的方式，将任务调用转发给任意一个可用的上下文桥实例。
+
+例如，在主线程中创建 3 个 Worker 线程，并分别创建与它们对应的上下文桥实例：
+
+```typescript
+const bridgeList = Array.from({ length: 3 },
+  () => createContextBridge({
+    createChannel: () => new Worker("./worker.js"),
+    onChannelClose: (oldWorker) => oldWorker.terminate()
+  }));
+```
+
+然后，定义一个函数，用于寻找一个当前信道打开，没有函数调用任务的上下文桥实例，如果没有则随机选择一个：
+
+```typescript
+function findAvailableBridge() {
+  return bridgeList.find(
+    bridge => bridge.channelState === "open" && !bridge.isInvoking
+  ) || bridgeList[Math.floor(Math.random() * bridgeList.length)];
+}
+```
+
+最后，用 Proxy 实现组合实例，拦截属性或方法的访问，并转发给可用的上下文桥实例：
+
+```typescript
+const combinedBridge: ContextBridgeInstance = new Proxy({}, {
+  get (target, prop) {
+    const bridge = findAvailableBridge();
+    if (typeof bridge[prop] === 'function') {
+      return (...args: any[]) => bridge[prop](...args);
+    } else {
+      return bridge[prop];
+    }
+  }
+});
+```
 
 ## API 列表
 
@@ -313,7 +352,8 @@ createContextBridge 方法根据一个上下文桥选项，创建并返回一个
 
 ### 性能指标（Performance Entry）
 
-性能指标是一个对象，反映上下文桥中发生的事件的性能信息。有两种类型的性能指标：连接指标（Connection Entry）和调用指标（Invoke Entry）。
+性能指标是一个对象，反映上下文桥中发生的事件的性能信息。有两种类型的性能指标：连接指标（Connection Entry）和调用指标（Invoke
+Entry）。
 
 #### 连接指标（Connection Entry）
 
