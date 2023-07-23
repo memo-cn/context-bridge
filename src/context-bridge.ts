@@ -3,7 +3,7 @@ import type { ContextBridgeChannel, ContextBridgeOptions } from './options';
 import type { ContextBridgeInstance } from './instance';
 import type { DetailedInvokeResult, Func, InvokeOptions } from './invoke';
 
-import { error2JSON, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval } from './utils';
+import { deepClone, error2JSON, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval } from './utils';
 import { LogLevel } from './options';
 import * as Message from './message';
 
@@ -819,7 +819,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         },
 
         getPerformanceEntries() {
-            return contextBridgePerformanceEntries.map((e) => Object.assign({}, e));
+            return deepClone(contextBridgePerformanceEntries);
         },
 
         get channelState() {

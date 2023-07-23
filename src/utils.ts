@@ -1,3 +1,5 @@
+import { isObject } from './message';
+
 // setTimeout、clearTimeout 支持的最大 timeout 。
 export const MAX_TIMEOUT_VALUE = 2 ** 31 - 1;
 
@@ -116,4 +118,15 @@ export function setExponentialInterval(handler: (...args: any) => any, timeout?:
     return function () {
         tid = null;
     };
+}
+
+export function deepClone<T>(obj: T): T {
+    if (!isObject(obj)) {
+        return obj;
+    }
+    const newObj = new (obj as any).constructor();
+    for (const [key, val] of Object.entries(obj)) {
+        newObj[key] = deepClone(val);
+    }
+    return newObj;
 }
