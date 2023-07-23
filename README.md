@@ -19,10 +19,10 @@ npm i context-bridge
 例如，在主线程内将 Worker 实例作为信道，创建上下文桥。
 
 ```typescript
-import {createContextBridge} from 'context-bridge';
+import { createContextBridge } from 'context-bridge';
 
 var mainBridge = createContextBridge({
-    createChannel: () => new Worker('./worker.js')
+  createChannel: () => new Worker('./worker.js')
 });
 ```
 
@@ -30,7 +30,7 @@ var mainBridge = createContextBridge({
 
 ```typescript
 var workerBridge = createContextBridge({
-    createChannel: () => self,
+  createChannel: () => self,
 });
 ```
 
@@ -38,12 +38,12 @@ createChannel 方法是一个工厂函数，期望返回一个实现信道接口
 
 ```typescript
 interface Channel {
-    onmessage: ((ev: MessageEvent) => any) | null;
-    postMessage: (message: any) => void;
+  onmessage: ((ev: MessageEvent) => any) | null;
+  postMessage: (message: any) => void;
 }
 
 interface MessageEvent {
-    data: any;
+  data: any;
 }
 ```
 
@@ -55,10 +55,10 @@ interface MessageEvent {
 workerBridge.on('sqrt', sqrt);
 
 function sqrt(num: number): number {
-    if (typeof num !== 'number') {
-        throw 'parameter should be a number.';
-    }
-    return Math.sqrt(num);
+  if (typeof num !== 'number') {
+    throw 'parameter should be a number.';
+  }
+  return Math.sqrt(num);
 }
 ```
 
@@ -97,18 +97,18 @@ onmessage 方法和支持结构化克隆算法的 postMessage 方法，那么就
 
 ```typescript
 var parentBridge = createContextBridge({
-    createChannel() {
-        const iframeWindow = document.querySelector('iframe').contentWindow;
-        const channel = {
-            postMessage() {
-                iframeWindow.postMessage(...arguments);
-            }
-        };
-        iframeWindow.parent.addEventListener('message', function () {
-            channel.onmessage(...arguments);
-        });
-        return channel;
-    },
+  createChannel() {
+    const iframeWindow = document.querySelector('iframe').contentWindow;
+    const channel = {
+      postMessage() {
+        iframeWindow.postMessage(...arguments);
+      }
+    };
+    iframeWindow.parent.addEventListener('message', function() {
+      channel.onmessage(...arguments);
+    });
+    return channel;
+  },
 });
 ```
 
@@ -116,17 +116,17 @@ var parentBridge = createContextBridge({
 
 ```typescript
 var iframeBridge = createContextBridge({
-    createChannel() {
-        const channel = {
-            postMessage() {
-                window.parent.postMessage(...arguments);
-            }
-        };
-        window.addEventListener('message', function () {
-            channel.onmessage(...arguments);
-        });
-        return channel;
-    },
+  createChannel() {
+    const channel = {
+      postMessage() {
+        window.parent.postMessage(...arguments);
+      }
+    };
+    window.addEventListener('message', function() {
+      channel.onmessage(...arguments);
+    });
+    return channel;
+  },
 });
 ```
 
@@ -136,7 +136,7 @@ var iframeBridge = createContextBridge({
 
 ```typescript
 var bridge = createContextBridge({
-    createChannel: () => new BroadcastChannel('exampleName')
+  createChannel: () => new BroadcastChannel('exampleName')
 });
 ```
 
@@ -158,17 +158,17 @@ WebSocket 实例包装为上下文桥需要的信道。
 
 ```typescript
 function createChannelFromWebSocket(webSocket) {
-    const channel = {
-        postMessage(data) {
-            webSocket.send(JSON.stringify(data));
-        },
-    };
-    webSocket.onmessage = function (ev) {
-        channel.onmessage({
-            data: JSON.parse(ev.data)
-        });
-    };
-    return channel;
+  const channel = {
+    postMessage(data) {
+      webSocket.send(JSON.stringify(data));
+    },
+  };
+  webSocket.onmessage = function(ev) {
+    channel.onmessage({
+      data: JSON.parse(ev.data)
+    });
+  };
+  return channel;
 }
 ```
 
@@ -177,22 +177,24 @@ function createChannelFromWebSocket(webSocket) {
 ```typescript
 var clientSocket = new WebSocket('ws://example.com');
 
-clientSocket.onopen = async function () {
-    const clientBridge = createContextBridge({
-        createChannel: () => createChannelFromWebSocket(clientSocket),
-    });
+clientSocket.onopen = async function() {
+  const clientBridge = createContextBridge({
+    createChannel: () => createChannelFromWebSocket(clientSocket),
+  });
 }
 ```
 
 在服务端收到连接请求后创建上下文桥。
 
 ```typescript
-webSocketServer.on('connection', function (serverSocket, incomingMessage) {
-    const serverBridge = createContextBridge({
-        createChannel: () => createChannelFromWebSocket(serverSocket),
-    });
+webSocketServer.on('connection', function(serverSocket, incomingMessage) {
+  const serverBridge = createContextBridge({
+    createChannel: () => createChannelFromWebSocket(serverSocket),
+  });
 });
 ```
+
+## 最佳实践
 
 ### 回环测试
 
@@ -200,21 +202,172 @@ webSocketServer.on('connection', function (serverSocket, incomingMessage) {
 
 ```typescript
 var bridge = createContextBridge({
-    createChannel: () => window,
+  createChannel: () => window,
 });
 ```
 
+### 组合实例
+
 ## API 列表
 
-### createContextBridge()
+### 创建上下文桥（createContextBridge）
 
 createContextBridge 方法用于创建一个上下文桥实例。参数为一个上下文桥选项 `ContextBridgeOptions`,
 返回创建的上下文桥实例 `ContextBridgeInstance`。
 
-#### 上下文桥选项（Context Bridge Options）
+### 上下文桥构造选项（Context Bridge Options）
 
-updating ...
+上下文桥选项是一个对象，包含以下属性：
 
-#### 上下文桥实例（Context Bridge Instance）
+#### tag
 
-updating ...
+上下文标识。在控制台打印的日志会有上下文标识前缀和颜色，以便区分不同的上下文桥实例。
+
+#### logLevel
+
+日志级别。低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'verbose' | 'warning' | 'error' 。
+
+#### createChannel
+
+信道工厂函数。建连需要创建信道，会调用此函数。期望返回一个实现信道接口的实例或一个 Promise 对象。
+
+#### onChannelClose
+
+信道关闭时的回调函数。创建下一个信道实例时，此函数会被回调。你可以做必要的资源释放。
+
+#### onChannelStateChange
+
+信道状态发生改变的回调函数。
+
+| 信道事件          | 	状态变化                             |
+|---------------|-----------------------------------|
+| 初始化 或 关闭时重启信道 | 	'closed' → 'connecting' → 'open' |  	
+| 打开时关闭信道       | 	'open' → 'closed'  	             |
+| 打开时重启信道  	    | 'open' → 'connecting' → 'open'    |
+
+#### connectionTimeout
+
+建连的超时时间。如果超过此时间没有建连完成，建连动作失败。默认为 5 秒。
+
+#### invokeTimeout
+
+函数调用的超时时间。如果超过此时间没有响应结果，调用失败。默认为 5 秒。
+
+#### reloadChannelOnConnectionFailure
+
+建连失败时是否重试。重试间隔不会小于 1 秒。默认为 true。
+
+#### reloadChannelOnInvokeTimeout
+
+函数调用超时时是否自动重启信道。仅在函数调用有超时限制时有效。默认为 true。
+
+#### onPerformanceEntry
+
+当有新的性能条目产生时触发的回调函数。
+
+### 上下文桥实例属性（Context Bridge Instance）
+
+上下文桥实例是一个对象，包含以下属性和方法：
+
+#### on
+
+方法，用于订阅或注册函数。接收两个参数，分别是函数名和函数实现。函数订阅与信道连接没有关联。可以在创建上下文桥实例后的任意时刻，在任何信道状态下，订阅函数。信道关闭或重启也不会导致已订阅的函数丢失。
+
+#### off
+
+方法，用于取消订阅或卸载函数。接收一个参数，即函数名。
+
+#### invoke
+
+方法，用于调用在另一个执行上下文订阅的函数。
+第一个参数可以是字符串，表示要调用的函数名；后面的参数是要传递给被调用函数的参数列表。返回一个兑现值为调用结果的 Promise
+对象。
+
+#### invokeWithDetail
+
+方法，用于调用在另一个执行上下文订阅的函数，并获取详细信息。
+
+#### getPerformanceEntries
+
+方法，用于手动获取性能条目列表。
+
+#### channelState
+
+属性，表示当前信道状态。取值为 'connecting' | 'open' | 'closed' 。
+
+#### channelStateReason
+
+属性，表示信道切换到当前状态的原因。
+
+#### reloadChannel
+
+方法，用于手动重启信道。接收一个可选的参数，表示重启的原因。
+
+#### closeChannel
+
+方法，用于手动关闭信道。接收一个可选的参数，表示关闭的原因。信道被手动关闭后, 不会再处理收到的消息, 只能手动重启。
+
+### 上下文桥性能条目（Context Bridge Performance Entry）
+
+性能指标是一个对象，表示上下文桥中发生的一些事件的性能信息。有两种类型的性能指标：连接指标（Connection Entry）和调用指标（Invoke Entry）。
+
+#### 建连条目（Connection Entry）
+
+连接指标是一个对象，表示上下文桥建立连接时的性能信息。
+
+| 属性        | 类型                     | 含义               |
+|-----------|------------------------|------------------|
+| tag       | string                 | 上下文标识            |
+| entryType | 'connection'           | 条目类型，表示建连        |
+| startTime | number                 | 开始建连的时间戳         |
+| duration  | number                 | 建连耗时             |
+| result    | 'success' \| 'failure' | 建连结果             |
+| reason    |                        | 建连失败的原因          |
+| error     |                        | 发生错误时, 对错误信息进行记录 |
+
+当 result 为 'failure' 时, 有 reason 和 error 属性。
+
+reason 在连接指标中的可能取值有:
+
+| 类型                        | 含义        |
+|---------------------------|-----------|
+| 'timeout'                 | 建立任务超时未完结 |
+| 'connection cancelled'    | 建连任务被取消   |
+| 'channel creation failed' | 信道创建失败    |
+| 'message sending failed'  | 消息发送失败    |
+
+error 的属性有:
+
+| 属性      | 类型     | 含义 |
+|---------|--------|----|
+| name    | string | 名称 |
+| message | string | 信息 |
+| stack   | string | 堆栈 |
+
+#### 调用条目（Invoke Entry）
+
+调用指标是一个对象，表示上下文桥调用函数时的性能信息。
+
+| 属性                | 类型                     | 含义               |
+|-------------------|------------------------|------------------|
+| tag               | string                 | 上下文标识            |
+| entryType         | 'invoke'               | 条目类型，表示函数调用      |
+| startTime         | number                 | 开始调用的时间戳         |
+| executionDuration | number                 | 执行耗时             |
+| responseDuration  | number                 | 响应耗时             |
+| call              | string                 | 调用的函数名称          |
+| result            | 'success' \| 'failure' | 调用结果             |
+| reason            |                        | 调用失败的原因          |
+| error             |                        | 发生错误时, 对错误信息进行记录 |
+
+reason 在调用指标中的可能取值有:
+
+| 类型                         | 含义        |
+|----------------------------|-----------|
+| 'timeout'                  | 调用任务超时未完结 |
+| 'invoke cancelled'         | 调用任务被取消   |
+| 'message sending failed'   | 消息发送失败    |
+| 'function execution error' | 函数执行报错    |
+| 'function not subscribed'  | 函数未被订阅    |
+
+

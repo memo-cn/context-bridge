@@ -69,7 +69,7 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
 
     /**
      * 日志级别
-     * @description 默认为 'warning'。低于设定级别的日志不会在控制台打印。
+     * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。
      */
     logLevel?: keyof typeof LogLevel;
 
@@ -126,7 +126,7 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
     reloadChannelOnInvokeTimeout?: boolean | null;
 
     /**
-     * 当有新的性能条目产生时触发的回调方法
+     * 当有新的性能条目产生时触发的回调函数
      * @param entry 性能条目。
      */
     onPerformanceEntry?: (entry: ContextBridgePerformanceEntry) => void;

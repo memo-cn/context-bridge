@@ -43,7 +43,7 @@ export type ContextBridgeInstance = {
     /** 当前的信道状态 */
     channelState: ChannelState;
 
-    /** 当前信道状态的原因 */
+    /** 信道切换到当前状态的原因 */
     channelStateReason: any;
 
     /**
