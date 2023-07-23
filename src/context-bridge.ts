@@ -1,9 +1,11 @@
-import * as Message from './message';
-import { ContextBridgePerformanceEntry, InvokeEntry, ConnectionEntry } from './performance';
-import { ContextBridgeChannel, ContextBridgeOptions, LogLevel } from './options';
-import { ContextBridgeInstance } from './instance';
-import { DetailedInvokeResult, Func, InvokeOptions } from './invoke';
+import type { ContextBridgePerformanceEntry, InvokeEntry, ConnectionEntry } from './performance';
+import type { ContextBridgeChannel, ContextBridgeOptions } from './options';
+import type { ContextBridgeInstance } from './instance';
+import type { DetailedInvokeResult, Func, InvokeOptions } from './invoke';
+
 import { error2JSON, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval } from './utils';
+import { LogLevel } from './options';
+import * as Message from './message';
 
 interface MessageEvent {
     data: any;

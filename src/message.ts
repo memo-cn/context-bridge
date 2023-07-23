@@ -1,5 +1,5 @@
 import type { JSONError } from './utils';
-import { InvokeEntry } from './performance';
+import type { InvokeEntry } from './performance';
 
 // 命名空间信息
 export const ns = { name: '__context-bridge', version: '0.0.2' } as const;
