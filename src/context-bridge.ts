@@ -24,7 +24,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     // 远程 round
     let remoteRound = -1;
 
-    // 被动触发建联时的远程 round
+    // 被动触发建连时的远程 round
     let passiveRemoteRound = -1;
 
     // 远程 tag
@@ -63,7 +63,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     let invokeTimeout = 0;
 
     // 建连超时时是否重启信道
-    let reloadChannelOnConnectionTimeout = true;
+    let reloadChannelOnConnectionFailure = true;
 
     // 函数调用超时时是否重启信道
     let reloadChannelOnInvokeTimeout = true;
@@ -162,10 +162,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     }
 
     // 建连超时时是否再次重启信道
-    reloadChannelOnConnectionTimeout = checkBooleanArgument(
-        options.reloadChannelOnConnectionTimeout,
+    reloadChannelOnConnectionFailure = checkBooleanArgument(
+        options.reloadChannelOnConnectionFailure,
         true,
-        'options.reloadChannelOnConnectionTimeout',
+        'options.reloadChannelOnConnectionFailure',
     );
 
     // 函数调用超时时是否自动重启信道
@@ -491,8 +491,17 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     connectionEntry.result = 'failure';
                     Log.e(reason);
                     setChannelState('closed', reason);
-                    if (connectionEntry.reason === 'timeout' && reloadChannelOnConnectionTimeout) {
-                        instance.reloadChannel(`建连#${operationRound}超时未完成, 自动重启信道`);
+
+                    // 重试建连
+                    if (connectionEntry.reason !== 'connection cancelled' && reloadChannelOnConnectionFailure) {
+                        let interval = 1000 - connectionEntry.duration;
+                        if (interval < 0) {
+                            interval = 0;
+                        }
+                        const tid = setTimeout(() => {
+                            instance.reloadChannel(`建连#${operationRound}失败, 自动重启信道`);
+                        }, interval);
+                        innerDisposeTasks.push(() => clearTimeout(tid));
                     }
                 },
             )
@@ -562,7 +571,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         // ····················「开始」建连 ····················
 
-        // 每隔 100 毫秒向另一个上下文发送一次 ready
+        // 向另一个上下文发送一次 ready
         Log.v(`建连#${operationRound}(${reason})开始。`);
         const stopSendReady = setExponentialInterval(sendReady, 100);
 
