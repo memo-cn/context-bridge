@@ -14,15 +14,15 @@ interface MessageEvent {
 // 记录 正在被使用的信道实例 及其 对应的操作轮次。一个信道不能同时被多个上下文桥使用。
 const channel2OperationRound = new WeakMap<ContextBridgeChannel, number>();
 
-// 操作轮次（进入 operateChannel 函数的次数），每个上下文都是唯一的。
-let operationRound = 0;
-
 /**
  * 创建 上下文桥
  */
 export function createContextBridge<C extends ContextBridgeChannel>(
     options: ContextBridgeOptions<C>,
 ): ContextBridgeInstance {
+    // 操作轮次（进入 operateChannel 函数的次数）。
+    let operationRound = 0;
+
     // 远程 round
     let remoteRound = -1;
 
@@ -441,12 +441,12 @@ export function createContextBridge<C extends ContextBridgeChannel>(
      * @param op
      */
     async function operateChannel(reason: any, op: 'reload' | 'close') {
-        setChannelState(op === 'close' ? 'closed' : 'connecting', reason);
-
         ++operationRound;
         if (operationRound === Number.MAX_SAFE_INTEGER) {
             operationRound = 0;
         }
+
+        setChannelState(op === 'close' ? 'closed' : 'connecting', reason);
 
         dispose();
 
