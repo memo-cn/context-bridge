@@ -2,9 +2,37 @@ import type { JSONError } from './utils';
 import type { InvokeEntry } from './performance';
 
 // 命名空间信息
-export const ns = { name: '__context-bridge', version: '0.0.2' } as const;
+const ns = {
+    key: '__context-bridge',
+    value: {
+        // 上下文桥 SDK 的版本
+        version: '0.0.2' as string,
+        // 业务标识
+        biz: void 0 as undefined | string,
+    },
+} as const;
 
-// 是否为对象
+type Biz = typeof ns.value.biz;
+
+// 给消息加上命名空间参数
+export function addNamespaceParams<T>(msg: T, { biz }: { biz: typeof ns.value.biz }): T & ContextBridgeMessage {
+    return Object.assign(
+        {
+            [ns.key]: {
+                version: ns.value.version,
+                biz,
+            },
+        },
+        msg,
+    );
+}
+
+// 消息
+export type ContextBridgeMessage = {
+    [K in typeof ns.key]: typeof ns.value;
+};
+
+// 参数是否为对象
 export function isObject(arg: any): arg is Record<any, any> {
     return Object(arg) === arg;
 }
@@ -17,20 +45,18 @@ export function isConsumed(msg: ContextBridgeMessage): boolean {
     return consumedMessage.has(msg);
 }
 
+// 是否为消息且信道匹配。
+export function isMessage(arg: any, biz: Biz): arg is ContextBridgeMessage & Record<any, any> {
+    if (!isObject(arg)) return false;
+    if (!(ns.key in arg)) return false; // && ns.value.version === arg[ns.key]?.version;
+    if (arg[ns.key].biz !== biz) return false;
+    return true;
+}
+
 // 标记消息已被消费
 export function markAsConsumed(msg: ContextBridgeMessage) {
     consumedMessage.add(msg);
 }
-
-// 是否为消息
-export function isMessage(arg: any): arg is ContextBridgeMessage & Record<any, any> {
-    if (!isObject(arg)) return false;
-    return ns.name in arg; // && ns.version === arg[ns.name];
-}
-
-export type ContextBridgeMessage = {
-    [K in typeof ns.name]: typeof ns.version;
-};
 
 // 调用函数
 export interface Call extends ContextBridgeMessage {
@@ -59,8 +85,8 @@ export interface ConnectionNotification extends ContextBridgeMessage {
     round: number;
 }
 
-export function isConnectionNotification(data: any): data is ConnectionNotification {
-    if (!isMessage(data)) return false;
+export function isConnectionNotification(data: any, biz: Biz): data is ConnectionNotification {
+    if (!isMessage(data, biz)) return false;
     if (typeof data.round !== 'number') {
         return false;
     }
@@ -70,8 +96,8 @@ export function isConnectionNotification(data: any): data is ConnectionNotificat
     return 'tag' in data;
 }
 
-export function isCall(data: any): data is Call {
-    if (!isMessage(data)) return false;
+export function isCall(data: any, biz: Biz): data is Call {
+    if (!isMessage(data, biz)) return false;
     if ('id' in data && 'call' in data && 'args' in data) {
         return true;
     }
@@ -81,7 +107,7 @@ export function isCall(data: any): data is Call {
     return false;
 }
 
-export function isReturn(data: any): data is Return {
-    if (!isMessage(data)) return false;
+export function isReturn(data: any, biz: Biz): data is Return {
+    if (!isMessage(data, biz)) return false;
     return 'id' in data && ('return' in data || 'throw' in data);
 }

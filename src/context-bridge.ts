@@ -58,6 +58,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「开始」选项数据 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
 
+    // 业务标识
+    let biz: undefined | string = void 0;
+
     // 建连的超时时间。为 0 时不限制, 否则为超时时间。
     let connectionTimeout = 0;
 
@@ -101,6 +104,17 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 `options.createChannel(${options.createChannel}) is not a function.`,
             ),
         );
+    }
+
+    /**
+     * 检验业务标识
+     */
+    if (options.biz === null || options.biz === void 0) {
+        biz = void 0;
+    } else if (typeof options.biz === 'string') {
+        biz = options.biz;
+    } else {
+        throw new TypeError(zhOrEn(`biz(${options.biz}) 不是字符串。`, `biz(${options.biz}) is not a string.`));
     }
 
     /**
@@ -270,16 +284,18 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         ...args: any[]
     ): Promise<DetailedInvokeResult<ReturnType<Awaited<RemoteFunction>>>> {
         // 调用指标
-        const invokeEntry: InvokeEntry = {
-            tag: localTag,
-            entryType: 'invoke',
-            startTime: Date.now(),
-            executionDuration: 0,
-            responseDuration: 0,
-            call: name,
-            result: null!,
-            [Message.ns.name]: Message.ns.version,
-        };
+        const invokeEntry: InvokeEntry = Message.addNamespaceParams(
+            {
+                tag: localTag,
+                entryType: 'invoke',
+                startTime: Date.now(),
+                executionDuration: 0,
+                responseDuration: 0,
+                call: name,
+                result: null!,
+            },
+            { biz },
+        );
 
         try {
             await readyTimePromise;
@@ -298,12 +314,14 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             id = invokeIdCount = 0;
         }
         Log.v(`开始调用$${id}`, name);
-        const m: Message.Call = {
-            id,
-            call: name,
-            args,
-            [Message.ns.name]: Message.ns.version,
-        };
+        const m: Message.Call = Message.addNamespaceParams(
+            {
+                id,
+                call: name,
+                args,
+            },
+            { biz },
+        );
 
         // 发送任务
         function send() {
@@ -512,14 +530,16 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             });
 
         // 建连指标
-        const connectionEntry: ConnectionEntry = {
-            tag: localTag,
-            entryType: 'connection',
-            startTime: Date.now(),
-            duration: 0,
-            result: null!,
-            [Message.ns.name]: Message.ns.version,
-        };
+        const connectionEntry: ConnectionEntry = Message.addNamespaceParams(
+            {
+                tag: localTag,
+                entryType: 'connection',
+                startTime: Date.now(),
+                duration: 0,
+                result: null!,
+            },
+            { biz },
+        );
 
         // 获取新信道
         try {
@@ -600,11 +620,13 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         function sendReady() {
             try {
-                const m: Message.ConnectionNotification = {
-                    tag: localTag,
-                    round: operationRound,
-                    [Message.ns.name]: Message.ns.version,
-                };
+                const m: Message.ConnectionNotification = Message.addNamespaceParams(
+                    {
+                        tag: localTag,
+                        round: operationRound,
+                    },
+                    { biz },
+                );
                 channel.postMessage(m);
             } catch (e) {
                 stopSendReady();
@@ -621,7 +643,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         async function onConnection(ev: MessageEvent) {
             const data = ev.data;
             // 两个上下文的连接实际上已经建立好了
-            if (Message.isConnectionNotification(data)) {
+            if (Message.isConnectionNotification(data, biz)) {
                 // 记录远程tag
                 remoteTag = String(data.tag || '远程');
                 // 记录远程轮次
@@ -681,18 +703,19 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         const data = ev?.data;
 
         // 一条消息, 只能被处理一次
-        if (Message.isMessage(data as any)) {
+        if (Message.isMessage(data, biz)) {
             if (Message.isConsumed(data)) {
-                Log.w('多个上下文实例间接共用同一个信道; 忽略已被消费的消息:', ev);
-            } else {
-                Message.markAsConsumed(data);
+                Log.w('多个上下文实例间接共用同一个信道, 请为不同实例指定不同的 channelId; 忽略已被消费的消息:', ev);
+                return;
             }
+            // 标记消息被消费
+            Message.markAsConsumed(data);
         } else {
-            Log.v('忽略未知类型的消息:', ev);
+            // Log.v('忽略未知类型的消息:', ev);
             return;
         }
 
-        if (Message.isCall(data)) {
+        if (Message.isCall(data, biz)) {
             const fun = name2function.get(String(data.call));
             let return_: any;
             let throw_: Error | undefined;
@@ -718,34 +741,38 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     Log.e(`结束执行$${data.id}`, data.call + ',', '报错', e);
                 }
             }
-            const r_: Message.Return = {
-                id: data.id,
-                return: return_,
-                executionDuration: endTime - startTime,
-                [Message.ns.name]: Message.ns.version,
-            };
+            const r_: Message.Return = Message.addNamespaceParams(
+                {
+                    id: data.id,
+                    return: return_,
+                    executionDuration: endTime - startTime,
+                },
+                { biz },
+            );
             if (throw_) {
                 r_.throw = error2JSON(throw_);
                 r_.reason = reason;
             }
             channel.postMessage(r_);
-        } else if (Message.isReturn(data)) {
+        } else if (Message.isReturn(data, biz)) {
             const invokeInfo = id2invokeInfo.get(data.id);
             if (invokeInfo) {
                 const responseDuration = Date.now() - invokeInfo.createdTime;
                 Log.v(`结束调用$${data.id}`, invokeInfo.funName + ',', '耗时', responseDuration, '毫秒。');
                 id2invokeInfo.delete(data.id);
 
-                const callEntry: InvokeEntry = {
-                    tag: localTag,
-                    entryType: 'invoke',
-                    startTime: invokeInfo.createdTime,
-                    executionDuration: data.executionDuration,
-                    responseDuration,
-                    call: invokeInfo.funName,
-                    result: 'success',
-                    [Message.ns.name]: Message.ns.version,
-                };
+                const callEntry: InvokeEntry = Message.addNamespaceParams(
+                    {
+                        tag: localTag,
+                        entryType: 'invoke',
+                        startTime: invokeInfo.createdTime,
+                        executionDuration: data.executionDuration,
+                        responseDuration,
+                        call: invokeInfo.funName,
+                        result: 'success',
+                    },
+                    { biz },
+                );
 
                 if (data.throw) {
                     const err = JSON2error(data.throw);
@@ -768,9 +795,12 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
                 contextBridgePerformanceEntries.push(callEntry);
             } else {
-                Log.w(`多个上下文实例间接共用同一个信道; Return id=${data.id} 没有对应的 Call.`, ev);
+                Log.w(
+                    `多个上下文实例间接共用同一个信道, 请为不同实例指定不同的 channelId; Return id=${data.id} 没有对应的 Call.`,
+                    ev,
+                );
             }
-        } else if (Message.isConnectionNotification(data)) {
+        } else if (Message.isConnectionNotification(data, biz)) {
             if (data.round > remoteRound) {
                 if (passiveRemoteRound !== data.round) {
                     passiveRemoteRound = data.round;

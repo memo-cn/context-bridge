@@ -68,6 +68,14 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
     tag?: string;
 
     /**
+     * **业务标识**
+     * @description
+     *     为了防止同一个信道被多个上下文桥实例并发使用导致的冲突或混乱，你可以给上下文桥设置一个业务标识。<br>
+     *     请确保不同执行环境中为同一业务提供服务的上下文桥的 biz 参数要么都设置且相同，要么都不设置。
+     */
+    biz?: string;
+
+    /**
      * **日志级别**
      * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'verbose' | 'warning' | 'error' 。
      */
