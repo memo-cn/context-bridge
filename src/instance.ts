@@ -2,24 +2,35 @@ import { ContextBridgePerformanceEntry } from './performance';
 import { Func, Invoke, InvokeWithDetail } from './invoke';
 import { ChannelState } from './options';
 
+/** 函数名匹配器 */
+export type NameMatcher = {
+    /**
+     * **匹配规则**
+     * @param 待匹配的函数名
+     * @returns 是否匹配成功
+     */
+    test: (name: string) => boolean;
+};
+
 /** 上下文桥实例 */
 export type ContextBridgeInstance = {
     /**
      * **订阅（注册）函数**
-     * @param name 函数名
+     * @param name 函数名，可以是字符串或实现了函数名匹配器接口的自定义对象，例如正则表达式（RegExp）。
      * @param fun 函数实现
      * @description
-     *     函数订阅与信道连接没有关联。<br>
-     *     可以在创建上下文桥实例后的任意时刻，在任何信道状态下，订阅函数。<br>
-     *     信道关闭或重启也不会导致已订阅的函数丢失。
+     *     该方法用于在当前上下文中订阅一个函数，使其可以被另一个上下文通过 invoke 方法调用。<br>
+     *     订阅函数的时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。<br>
+     *     当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，如果没有匹配到，再按订阅顺序使用函数名匹配器进行匹配。
+     *     函数名匹配器接口要求有 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。
      */
-    on: <Fun extends Func = Func>(name: string, fun: Fun) => void;
+    on: <Fun extends Func = Func>(name: string | NameMatcher, fun: Fun) => void;
 
     /**
      * **取消订阅（卸载）函数**
      * @param name 函数名
      */
-    off: (name: string) => void;
+    off: (name: string | NameMatcher) => void;
 
     /**
      * **调用在另一个上下文订阅的函数**
