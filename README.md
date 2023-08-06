@@ -22,7 +22,7 @@ npm i context-bridge
 import { createContextBridge } from 'context-bridge';
 
 var mainBridge = createContextBridge({
-  createChannel: () => new Worker('./worker.js')
+    createChannel: () => new Worker('./worker.js')
 });
 ```
 
@@ -30,7 +30,7 @@ var mainBridge = createContextBridge({
 
 ```typescript
 var workerBridge = createContextBridge({
-  createChannel: () => self,
+    createChannel: () => self,
 });
 ```
 
@@ -38,12 +38,12 @@ createChannel 方法是一个工厂函数，期望返回一个实现信道接口
 
 ```typescript
 interface Channel {
-  onmessage: ((ev: MessageEvent) => any) | null;
-  postMessage: (message: any) => void;
+    onmessage: ((ev: MessageEvent) => any) | null;
+    postMessage: (message: any) => void;
 }
 
 interface MessageEvent {
-  data: any;
+    data: any;
 }
 ```
 
@@ -55,10 +55,10 @@ interface MessageEvent {
 workerBridge.on('sqrt', sqrt);
 
 function sqrt(num: number): number {
-  if (typeof num !== 'number') {
-    throw 'parameter should be a number.';
-  }
-  return Math.sqrt(num);
+    if (typeof num !== 'number') {
+        throw 'parameter should be a number.';
+    }
+    return Math.sqrt(num);
 }
 ```
 
@@ -97,20 +97,20 @@ onmessage 方法和支持结构化克隆算法的 postMessage 方法，那么就
 
 ```typescript
 var parentBridge = createContextBridge({
-  createChannel() {
-    const iframe = document.querySelector('iframe');
-    const channel = {
-      postMessage(data) {
-        iframe.contentWindow?.postMessage?.(data, '*');
-      }
-    };
-    self.addEventListener('message', function (ev) {
-        if(ev.source === iframe.contentWindow){
-            channel?.onmessage?.(ev);
-        }
-    });
-    return channel;
-  },
+    createChannel() {
+        const iframe = document.querySelector('iframe');
+        const channel = {
+            postMessage(data) {
+                iframe.contentWindow?.postMessage?.(data, '*');
+            }
+        };
+        self.addEventListener('message', function(ev) {
+            if (ev.source === iframe.contentWindow) {
+                channel?.onmessage?.(ev);
+            }
+        });
+        return channel;
+    },
 });
 ```
 
@@ -118,17 +118,17 @@ var parentBridge = createContextBridge({
 
 ```typescript
 var iframeBridge = createContextBridge({
-  createChannel() {
-    const channel = {
-      postMessage(data) {
-        parent.postMessage(data, '*');
-      }
-    };
-    self.addEventListener('message', function(ev) {
-      channel?.onmessage?.(ev);
-    });
-    return channel;
-  },
+    createChannel() {
+        const channel = {
+            postMessage(data) {
+                parent.postMessage(data, '*');
+            }
+        };
+        self.addEventListener('message', function(ev) {
+            channel?.onmessage?.(ev);
+        });
+        return channel;
+    },
 });
 ```
 
@@ -138,7 +138,7 @@ var iframeBridge = createContextBridge({
 
 ```typescript
 var bridge = createContextBridge({
-  createChannel: () => new BroadcastChannel('exampleName')
+    createChannel: () => new BroadcastChannel('exampleName')
 });
 ```
 
@@ -160,17 +160,17 @@ WebSocket 实例包装为上下文桥需要的信道。
 
 ```typescript
 function createChannelFromWebSocket(webSocket) {
-  const channel = {
-    postMessage(data) {
-      webSocket.send(JSON.stringify(data));
-    },
-  };
-  webSocket.onmessage = function(ev) {
-    channel?.onmessage?.({
-      data: JSON.parse(ev.data)
-    });
-  };
-  return channel;
+    const channel = {
+        postMessage(data) {
+            webSocket.send(JSON.stringify(data));
+        },
+    };
+    webSocket.onmessage = function(ev) {
+        channel?.onmessage?.({
+            data: JSON.parse(ev.data)
+        });
+    };
+    return channel;
 }
 ```
 
@@ -180,9 +180,9 @@ function createChannelFromWebSocket(webSocket) {
 var clientSocket = new WebSocket('ws://example.com');
 
 clientSocket.onopen = async function() {
-  const clientBridge = createContextBridge({
-    createChannel: () => createChannelFromWebSocket(clientSocket),
-  });
+    const clientBridge = createContextBridge({
+        createChannel: () => createChannelFromWebSocket(clientSocket),
+    });
 }
 ```
 
@@ -190,9 +190,9 @@ clientSocket.onopen = async function() {
 
 ```typescript
 webSocketServer.on('connection', function(serverSocket, incomingMessage) {
-  const serverBridge = createContextBridge({
-    createChannel: () => createChannelFromWebSocket(serverSocket),
-  });
+    const serverBridge = createContextBridge({
+        createChannel: () => createChannelFromWebSocket(serverSocket),
+    });
 });
 ```
 
@@ -204,7 +204,7 @@ webSocketServer.on('connection', function(serverSocket, incomingMessage) {
 
 ```typescript
 var bridge = createContextBridge({
-  createChannel: () => window,
+    createChannel: () => window,
 });
 ```
 
@@ -218,19 +218,19 @@ var bridge = createContextBridge({
 
 ```typescript
 const bridgeList = Array.from({ length: 3 },
-  () => createContextBridge({
-    createChannel: () => new Worker("./worker.js"),
-    onChannelClose: (oldWorker) => oldWorker.terminate()
-  }));
+    () => createContextBridge({
+        createChannel: () => new Worker("./worker.js"),
+        onChannelClose: (oldWorker) => oldWorker.terminate()
+    }));
 ```
 
 然后，定义一个函数，用于寻找一个当前信道打开，没有函数调用任务的上下文桥实例，如果没有则随机选择一个：
 
 ```typescript
 function findAvailableBridge() {
-  return bridgeList.find(
-    bridge => bridge.channelState === "open" && !bridge.isInvoking
-  ) || bridgeList[Math.floor(Math.random() * bridgeList.length)];
+    return bridgeList.find(
+        bridge => bridge.channelState === "open" && !bridge.isInvoking
+    ) || bridgeList[Math.floor(Math.random() * bridgeList.length)];
 }
 ```
 
@@ -238,14 +238,14 @@ function findAvailableBridge() {
 
 ```typescript
 const combinedBridge: ContextBridgeInstance = new Proxy({}, {
-  get (target, prop) {
-    const bridge = findAvailableBridge();
-    if (typeof bridge[prop] === 'function') {
-      return (...args: any[]) => bridge[prop](...args);
-    } else {
-      return bridge[prop];
+    get(target, prop) {
+        const bridge = findAvailableBridge();
+        if (typeof bridge[prop] === 'function') {
+            return (...args: any[]) => bridge[prop](...args);
+        } else {
+            return bridge[prop];
+        }
     }
-  }
 });
 ```
 
@@ -263,7 +263,8 @@ createContextBridge 方法根据一个上下文桥选项，创建并返回一个
 
 #### biz
 
-业务标识。为了防止同一个信道被多个上下文桥实例并发使用导致的冲突或混乱，你可以给上下文桥设置一个业务标识。请确保不同执行环境中为同一业务提供服务的上下文桥的 biz 参数要么都设置且相同，要么都不设置。
+业务标识。为了防止同一个信道被多个上下文桥实例并发使用导致的冲突或混乱，你可以给上下文桥设置一个业务标识。请确保不同执行环境中为同一业务提供服务的上下文桥的
+biz 参数要么都设置且相同，要么都不设置。
 
 #### logLevel
 
@@ -318,7 +319,8 @@ createContextBridge 方法根据一个上下文桥选项，创建并返回一个
 -   该方法用于在当前上下文中订阅一个函数，使其可以被另一个上下文通过 invoke 方法调用。
 -   订阅函数的时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。
 -   当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，如果没有匹配到，再按订阅顺序使用函数名匹配器进行匹配。
--   函数名匹配器接口要求有 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。
+-   函数名匹配器接口包含 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。
+-   如果函数实现不是箭头函数，你可以通过 this.call 属性获取到实际调用的函数名。
 
 #### off
 

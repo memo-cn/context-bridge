@@ -719,7 +719,32 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
 
         if (Message.isCall(data, biz)) {
-            const fun = nameOrMatcher2function.get(String(data.call));
+            // 调用上下文
+            const invokeContext = {
+                call: String(data.call),
+            };
+
+            // 调用函数
+            let fun = nameOrMatcher2function.get(invokeContext.call);
+
+            if (!fun) {
+                for (const matcher of nameMatcherList) {
+                    let isMatch = false;
+                    try {
+                        isMatch = matcher.test(invokeContext.call);
+                    } catch (e) {
+                        Log.e(`函数匹配器 ${matcher} 报错`, e);
+                        continue;
+                    }
+                    if (isMatch) {
+                        fun = nameOrMatcher2function.get(matcher);
+                        if (fun) {
+                            break;
+                        }
+                    }
+                }
+            }
+
             let return_: any;
             let throw_: Error | undefined;
             let reason: InvokeEntry['reason'] | undefined;
@@ -734,7 +759,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 try {
                     Log.v(`开始执行$${data.id}`, data.call);
                     startTime = Date.now();
-                    return_ = await Reflect.apply(fun, null, data.args);
+                    return_ = await Reflect.apply(fun, invokeContext, data.args);
                     endTime = Date.now();
                     Log.v(`结束执行$${data.id}`, data.call + ',', '耗时', endTime - startTime, '毫秒。');
                 } catch (e: any) {

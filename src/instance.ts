@@ -16,13 +16,15 @@ export type NameMatcher = {
 export type ContextBridgeInstance = {
     /**
      * **订阅（注册）函数**
-     * @param name 函数名，可以是字符串或实现了函数名匹配器接口的自定义对象，例如正则表达式（RegExp）。
+     * @param name 函数名，可以是字符串或实现了函数名匹配器接口的自定义实例，例如正则表达式（RegExp）。
      * @param fun 函数实现
      * @description
-     *     该方法用于在当前上下文中订阅一个函数，使其可以被另一个上下文通过 invoke 方法调用。<br>
-     *     订阅函数的时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。<br>
-     *     当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，如果没有匹配到，再按订阅顺序使用函数名匹配器进行匹配。
-     *     函数名匹配器接口要求有 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。
+     *
+     *     - 该方法用于在当前上下文中订阅一个函数，使其可以被另一个上下文通过 invoke 方法调用。<br>
+     *     - 订阅函数的时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。<br>
+     *     - 当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，如果没有匹配到，再按订阅顺序使用函数名匹配器进行匹配。<br>
+     *     - 函数名匹配器接口包含 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。<br>
+     *     - 如果函数实现不是箭头函数，你可以通过 this.call 属性获取到实际调用的函数名。
      */
     on: <Fun extends Func = Func>(name: string | NameMatcher, fun: Fun) => void;
 
