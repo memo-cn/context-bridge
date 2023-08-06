@@ -10,6 +10,14 @@ export type DetailedInvokeResult<T = any> = {
     responseDuration: number;
 };
 
+/**
+ * 调用上下文
+ */
+export type InvokeContext = {
+    /** 调用的函数名称 */
+    call: string;
+};
+
 export type Func = (...args: any[]) => any;
 export type ToAsync<Fun extends Func = Func> = (...args: Parameters<Fun>) => Promise<ReturnType<Fun>>;
 

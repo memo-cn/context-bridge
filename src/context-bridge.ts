@@ -1,7 +1,7 @@
 import type { ContextBridgePerformanceEntry, InvokeEntry, ConnectionEntry } from './performance';
 import type { ContextBridgeChannel, ContextBridgeOptions } from './options';
 import type { ContextBridgeInstance, NameMatcher } from './instance';
-import type { DetailedInvokeResult, Func, InvokeOptions } from './invoke';
+import type { DetailedInvokeResult, Func, InvokeContext, InvokeOptions } from './invoke';
 
 import { deepClone, error2JSON, isObject, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval } from './utils';
 import { LogLevel } from './options';
@@ -720,7 +720,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         if (Message.isCall(data, biz)) {
             // 调用上下文
-            const invokeContext = {
+            const invokeContext: InvokeContext = {
                 call: String(data.call),
             };
 

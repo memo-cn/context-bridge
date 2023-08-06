@@ -1,5 +1,5 @@
 import { ContextBridgePerformanceEntry } from './performance';
-import { Func, Invoke, InvokeWithDetail } from './invoke';
+import { Func, Invoke, InvokeContext, InvokeWithDetail } from './invoke';
 import { ChannelState } from './options';
 
 /** 函数名匹配器 */
@@ -26,7 +26,10 @@ export type ContextBridgeInstance = {
      *     - 函数名匹配器接口包含 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。<br>
      *     - 如果函数实现不是箭头函数，你可以通过 this.call 属性获取到实际调用的函数名。
      */
-    on: <Fun extends Func = Func>(name: string | NameMatcher, fun: Fun) => void;
+    on: <Fun extends Func = Func>(
+        name: string | NameMatcher,
+        fun: (this: InvokeContext, ...args: Parameters<Fun>) => ReturnType<Fun>,
+    ) => void;
 
     /**
      * **取消订阅（卸载）函数**
