@@ -929,10 +929,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             const nameOrMatcher: string | NameMatcher = typeof name === 'string' ? name$string : name;
 
             if (nameOrMatcher2function.has(name$string) || index >= 0) {
+                nameOrMatcher2function.delete(name$string);
                 if (index >= 0) {
                     nameMatcherList.splice(index, 1);
                 }
-                delete nameMatcherList[index];
                 Log.v(`已取消订阅: ${str(nameOrMatcher)} 。`);
             } else {
                 Log.w(`未订阅: ${str(nameOrMatcher)}, 无需取消。`);
