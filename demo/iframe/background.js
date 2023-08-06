@@ -5,12 +5,12 @@ const iframeBridge = createContextBridge({
     logLevel: 'verbose',
     createChannel() {
         const channel = {
-            postMessage() {
-                parent.postMessage(...arguments);
+            postMessage(data) {
+                parent.postMessage(data, '*');
             },
         };
-        window.addEventListener('message', function () {
-            channel?.onmessage?.(...arguments);
+        self.addEventListener('message', function (ev) {
+            channel?.onmessage?.(ev);
         });
         return channel;
     },

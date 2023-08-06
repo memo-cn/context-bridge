@@ -98,32 +98,34 @@ onmessage 方法和支持结构化克隆算法的 postMessage 方法，那么就
 ```typescript
 var parentBridge = createContextBridge({
   createChannel() {
-    const iframeWindow = document.querySelector('iframe').contentWindow;
+    const iframe = document.querySelector('iframe');
     const channel = {
-      postMessage() {
-        iframeWindow.postMessage(...arguments);
+      postMessage(data) {
+        iframe.contentWindow?.postMessage?.(data, '*');
       }
     };
-    iframeWindow.parent.addEventListener('message', function() {
-      channel.onmessage(...arguments);
+    self.addEventListener('message', function (ev) {
+        if(ev.source === iframe.contentWindow){
+            channel?.onmessage?.(ev);
+        }
     });
     return channel;
   },
 });
 ```
 
-在内嵌窗口里通过 window.parent 属性，取到父窗口的引用，从而创建上下文桥。
+在内嵌窗口里通过 parent 属性，取到父窗口的引用，从而创建上下文桥。
 
 ```typescript
 var iframeBridge = createContextBridge({
   createChannel() {
     const channel = {
-      postMessage() {
-        window.parent.postMessage(...arguments);
+      postMessage(data) {
+        parent.postMessage(data, '*');
       }
     };
-    window.addEventListener('message', function() {
-      channel.onmessage(...arguments);
+    self.addEventListener('message', function(ev) {
+      channel?.onmessage?.(ev);
     });
     return channel;
   },
@@ -164,7 +166,7 @@ function createChannelFromWebSocket(webSocket) {
     },
   };
   webSocket.onmessage = function(ev) {
-    channel.onmessage({
+    channel?.onmessage?.({
       data: JSON.parse(ev.data)
     });
   };

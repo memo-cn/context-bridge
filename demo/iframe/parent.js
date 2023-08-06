@@ -1,18 +1,19 @@
 import { createContextBridge } from '../../dist/context-bridge.es.js';
 
-var contentWindow = document.querySelector('iframe').contentWindow;
-
 const parentBridge = createContextBridge({
     tag: 'main',
     logLevel: 'verbose',
     createChannel() {
+        const iframe = document.querySelector('iframe');
         const channel = {
-            postMessage() {
-                contentWindow.postMessage(...arguments);
+            postMessage(data) {
+                iframe.contentWindow?.postMessage?.(data, '*');
             },
         };
-        contentWindow.parent.addEventListener('message', function () {
-            channel?.onmessage?.(...arguments);
+        self.addEventListener('message', function (ev) {
+            if (ev.source === iframe.contentWindow) {
+                channel?.onmessage?.(ev);
+            }
         });
         return channel;
     },
