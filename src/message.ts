@@ -1,5 +1,6 @@
 import type { JSONError } from './utils';
 import type { InvokeEntry } from './performance';
+import { isObject } from './utils';
 
 // 命名空间信息
 const ns = {
@@ -31,11 +32,6 @@ export function addNamespaceParams<T>(msg: T, { biz }: { biz: typeof ns.value.bi
 export type ContextBridgeMessage = {
     [K in typeof ns.key]: typeof ns.value;
 };
-
-// 参数是否为对象
-export function isObject(arg: any): arg is Record<any, any> {
-    return Object(arg) === arg;
-}
 
 // 记录被消费的消息
 const consumedMessage = new WeakSet<ContextBridgeMessage>();

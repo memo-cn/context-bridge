@@ -1,9 +1,9 @@
 import type { ContextBridgePerformanceEntry, InvokeEntry, ConnectionEntry } from './performance';
 import type { ContextBridgeChannel, ContextBridgeOptions } from './options';
-import type { ContextBridgeInstance } from './instance';
+import type { ContextBridgeInstance, NameMatcher } from './instance';
 import type { DetailedInvokeResult, Func, InvokeOptions } from './invoke';
 
-import { deepClone, error2JSON, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval } from './utils';
+import { deepClone, error2JSON, isObject, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval } from './utils';
 import { LogLevel } from './options';
 import * as Message from './message';
 
@@ -94,7 +94,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     checkArgumentsCount(arguments, 1);
 
-    if (!Message.isObject(options)) {
+    if (!isObject(options)) {
         throw new TypeError(zhOrEn(`options(${options}) 不是对象。`, `options(${options}) is not a object.`));
     }
     if (typeof options.createChannel !== 'function') {
@@ -435,7 +435,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     let invokeIdCount = 0;
 
     // 注册的 name → 函数
-    const name2function = new Map<string, (...args: any) => any>();
+    const nameOrMatcher2function = new Map<string | NameMatcher, (...args: any) => any>();
+
+    // 函数名匹配器
+    const nameMatcherList: NameMatcher[] = [];
 
     // 内部的析构任务队列。操作信道时执行。
     const innerDisposeTasks: (() => void)[] = [];
@@ -573,7 +576,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         // 校验信道
         function checkChannel(channel: ContextBridgeChannel) {
-            if (!Message.isObject(channel)) {
+            if (!isObject(channel)) {
                 throw new TypeError(zhOrEn(`channel(${channel}) 不是对象。`, `channel(${channel}) is not a object.`));
             }
             if (typeof channel.postMessage !== 'function') {
@@ -716,7 +719,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
 
         if (Message.isCall(data, biz)) {
-            const fun = name2function.get(String(data.call));
+            const fun = nameOrMatcher2function.get(String(data.call));
             let return_: any;
             let throw_: Error | undefined;
             let reason: InvokeEntry['reason'] | undefined;
@@ -813,31 +816,60 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     const instance: ContextBridgeInstance = {
         on<Fun extends Func = Func>(name: any, fun: Fun) {
             checkArgumentsCount(arguments, 2);
+
             if (typeof fun !== 'function') {
                 throw new Error(zhOrEn('fun 参数应为函数。', 'fun argument should be a function.'));
             }
-            const name$string = String(name);
-            const fun$existing = name2function.get(name$string);
+
+            let nameOrMatcher: string | NameMatcher = '';
+            if (isObject(name)) {
+                if (typeof name.test !== 'function') {
+                    throw new TypeError(
+                        zhOrEn(
+                            `nameMatcher.test(${name.test}) 不是函数。`,
+                            `nameMatcher.test(${name.test}) is not a function.`,
+                        ),
+                    );
+                }
+                nameOrMatcher = name as any;
+            } else {
+                nameOrMatcher = String(name);
+            }
+
+            const fun$existing = nameOrMatcher2function.get(nameOrMatcher);
             if (fun$existing) {
                 if (fun$existing !== fun) {
-                    throw new Error(`订阅失败。请先取消对: ${name$string} 的上次订阅。`);
+                    throw new Error(`订阅失败。请先取消对: ${nameOrMatcher} 的上次订阅。`);
                 } else {
-                    Log.w(`重复订阅: ${name$string}, 已忽略。`);
+                    Log.w(`重复订阅: ${nameOrMatcher}, 已忽略。`);
                     return;
                 }
             }
-            name2function.set(name$string, fun);
-            Log.v(`已订阅: ${name$string}。`);
+
+            nameOrMatcher2function.set(nameOrMatcher, fun);
+            if (typeof nameOrMatcher !== 'string') {
+                nameMatcherList.push(nameOrMatcher);
+            }
+
+            Log.v(`已订阅: ${nameOrMatcher}。`);
         },
 
         off(name: any) {
             checkArgumentsCount(arguments, 1);
+
             const name$string = String(name);
-            if (name2function.has(name$string)) {
-                name2function.delete(name$string);
-                Log.v(`已取消订阅: ${name$string}`);
+            const index = nameMatcherList.indexOf(name);
+
+            const nameOrMatcher: string | NameMatcher = typeof name === 'string' ? name$string : name;
+
+            if (nameOrMatcher2function.has(name$string) || index >= 0) {
+                if (index >= 0) {
+                    nameMatcherList.splice(index, 1);
+                }
+                delete nameMatcherList[index];
+                Log.v(`已取消订阅: ${nameOrMatcher}`);
             } else {
-                Log.w(`未订阅: ${name$string}, 无需取消。`);
+                Log.w(`未订阅: ${nameOrMatcher}, 无需取消。`);
             }
         },
 

@@ -1,5 +1,3 @@
-import { isObject } from './message';
-
 // setTimeout、clearTimeout 支持的最大 timeout 。
 export const MAX_TIMEOUT_VALUE = 2 ** 31 - 1;
 
@@ -129,4 +127,9 @@ export function deepClone<T>(obj: T): T {
         newObj[key] = deepClone(val);
     }
     return newObj;
+}
+
+// 参数是否为对象
+export function isObject(arg: any): arg is Record<any, any> {
+    return Object(arg) === arg;
 }
