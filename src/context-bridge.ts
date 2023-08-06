@@ -1,10 +1,10 @@
-import type { ContextBridgePerformanceEntry, InvokeEntry, ConnectionEntry } from './performance';
+import type { ConnectionEntry, ContextBridgePerformanceEntry, InvokeEntry } from './performance';
 import type { ContextBridgeChannel, ContextBridgeOptions } from './options';
+import { LogLevel } from './options';
 import type { ContextBridgeInstance, NameMatcher } from './instance';
 import type { DetailedInvokeResult, Func, InvokeContext, InvokeOptions } from './invoke';
 
-import { deepClone, error2JSON, isObject, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval } from './utils';
-import { LogLevel } from './options';
+import { deepClone, error2JSON, isObject, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval, str } from './utils';
 import * as Message from './message';
 
 interface MessageEvent {
@@ -33,7 +33,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     let remoteTag = '';
 
     // 本地 tag
-    let localTag = String(options?.tag ?? '');
+    let localTag = '';
 
     //////////////////////////////////////////////////////////////////
 
@@ -60,6 +60,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     // 业务标识
     let biz: undefined | string = void 0;
+
+    // 日志级别
+    let logLevel = LogLevel.warning;
 
     // 建连的超时时间。为 0 时不限制, 否则为超时时间。
     let connectionTimeout = 0;
@@ -95,27 +98,35 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     checkArgumentsCount(arguments, 1);
 
     if (!isObject(options)) {
-        throw new TypeError(zhOrEn(`options(${options}) 不是对象。`, `options(${options}) is not a object.`));
+        throw new TypeError(zhOrEn(`options(${str(options)}) 不是对象。`, `options(${str(options)}) is not a object.`));
     }
     if (typeof options.createChannel !== 'function') {
         throw new TypeError(
             zhOrEn(
-                `options.createChannel(${options.createChannel}) 不是函数。`,
-                `options.createChannel(${options.createChannel}) is not a function.`,
+                `options.createChannel(${str(options.createChannel)}) 不是函数。`,
+                `options.createChannel(${str(options.createChannel)}) is not a function.`,
             ),
         );
     }
 
-    /**
-     * 检验业务标识
-     */
-    if (options.biz === null || options.biz === void 0) {
-        biz = void 0;
-    } else if (typeof options.biz === 'string') {
-        biz = options.biz;
-    } else {
-        throw new TypeError(zhOrEn(`biz(${options.biz}) 不是字符串。`, `biz(${options.biz}) is not a string.`));
+    // 校验字符串合法性
+    function checkStringArgument<T>(value: any, default_: T, literal: string) {
+        if (value === null || value === void 0) {
+            return default_;
+        } else if (typeof value === 'string') {
+            return value;
+        } else {
+            throw new TypeError(
+                zhOrEn(`${literal}(${str(value)}) 不是字符串。`, `${literal}(${str(value)}) is not a string.`),
+            );
+        }
     }
+
+    // 检验本地 tag
+    localTag = checkStringArgument(options.tag, '', 'options.tag');
+
+    // 检验业务标识
+    biz = checkStringArgument(options.biz, void 0, 'options.biz');
 
     /**
      * 校验超时选项合法性
@@ -131,7 +142,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         // 非数值
         if (typeof value !== 'number') {
-            throw new TypeError(zhOrEn(`${literal}(${value}) 不是数值。`, `${literal}(${value}) is not a number.`));
+            throw new TypeError(
+                zhOrEn(`${literal}(${str(value)}) 不是数值。`, `${literal}(${str(value)}) is not a number.`),
+            );
         }
 
         if (value === 0) {
@@ -142,7 +155,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         if (value < 0) {
             // 负数
             throw new TypeError(
-                zhOrEn(`${literal}(${value}) 不能为负数。`, `${literal}(${value}) cannot be a negative number.`),
+                zhOrEn(
+                    `${literal}(${str(value)}) 不能为负数。`,
+                    `${literal}(${str(value)}) cannot be a negative number.`,
+                ),
             );
         }
 
@@ -155,7 +171,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
 
         // 数值非法。
-        throw new TypeError(zhOrEn(`${literal}(${value}) 非法。`, `${literal}(${value}) is illegal.`));
+        throw new TypeError(zhOrEn(`${literal}(${str(value)}) 非法。`, `${literal}(${str(value)}) is illegal.`));
     }
 
     connectionTimeout = checkTimeoutArgument(options.connectionTimeout, 5000, 'options.connectionTimeout');
@@ -174,7 +190,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         if (typeof value === 'boolean') {
             return value;
         }
-        throw new TypeError(zhOrEn(`${literal}(${value}) 不是布尔值。`, `${literal}(${value}) is not a boolean.`));
+        throw new TypeError(
+            zhOrEn(`${literal}(${str(value)}) 不是布尔值。`, `${literal}(${str(value)}) is not a boolean.`),
+        );
     }
 
     // 建连超时时是否再次重启信道
@@ -195,8 +213,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         if (typeof options.onPerformanceEntry !== 'function') {
             throw new TypeError(
                 zhOrEn(
-                    `options.onPerformanceEntry(${options.onPerformanceEntry}) 不是函数。`,
-                    `options.onPerformanceEntry(${options.onPerformanceEntry}) is not a function.`,
+                    `options.onPerformanceEntry(${str(options.onPerformanceEntry)}) 不是函数。`,
+                    `options.onPerformanceEntry(${str(options.onPerformanceEntry)}) is not a function.`,
                 ),
             );
         } else {
@@ -204,12 +222,27 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
     }
 
+    // 校验日志级别
+    if (options.logLevel) {
+        const arr = Object.keys(LogLevel).filter((x) => Number.isNaN(Number(x)));
+        if (!arr.includes(options.logLevel)) {
+            throw new TypeError(
+                zhOrEn(
+                    `options.logLevel(${str(options.logLevel)}) 有误, 应为 ${arr
+                        .map((x) => `'${x}'`)
+                        .join(', ')} 之一。`,
+                    `options.logLevel(${str(options.logLevel)}) is invalid, it should be one of ${arr
+                        .map((x) => `'${x}'`)
+                        .join(', ')}.`,
+                ),
+            );
+        }
+        logLevel = LogLevel[options.logLevel];
+    }
+
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「结束」选项参数校验 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
 
     /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「开始」日志 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
-
-    // 日志级别
-    const logLevel = LogLevel[options?.logLevel ?? 'error'] || LogLevel.warning;
 
     // 布尔值 (remoteTag > localTag)
     let logOpposite: null | boolean = null;
@@ -458,10 +491,11 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     /**
      * 重启或关闭信道
-     * @param reason 原因
+     * @param reason$0 原因
      * @param op
      */
-    async function operateChannel(reason: any, op: 'reload' | 'close') {
+    async function operateChannel(reason$0: any, op: 'reload' | 'close') {
+        const reason = str(reason$0);
         ++operationRound;
         if (operationRound === Number.MAX_SAFE_INTEGER) {
             operationRound = 0;
@@ -551,7 +585,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
             if (channel2OperationRound.has(newChannel)) {
                 throw new Error(
-                    `channel(${newChannel}) 正在被其他上下文桥#${channel2OperationRound.get(newChannel)}使用。`,
+                    `channel(${str(newChannel)}) 正在被其他上下文桥#${channel2OperationRound.get(newChannel)}使用。`,
                 );
             }
             channel2OperationRound.set(newChannel, operationRound);
@@ -577,13 +611,15 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         // 校验信道
         function checkChannel(channel: ContextBridgeChannel) {
             if (!isObject(channel)) {
-                throw new TypeError(zhOrEn(`channel(${channel}) 不是对象。`, `channel(${channel}) is not a object.`));
+                throw new TypeError(
+                    zhOrEn(`channel(${str(channel)}) 不是对象。`, `channel(${str(channel)}) is not a object.`),
+                );
             }
             if (typeof channel.postMessage !== 'function') {
                 throw new TypeError(
                     zhOrEn(
-                        `channel.postMessage(${channel.postMessage}) 不是函数。`,
-                        `channel.postMessage(${channel.postMessage}) is not a function.`,
+                        `channel.postMessage(${str(channel.postMessage)}) 不是函数。`,
+                        `channel.postMessage(${str(channel.postMessage)}) is not a function.`,
                     ),
                 );
             }
@@ -633,7 +669,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 channel.postMessage(m);
             } catch (e) {
                 stopSendReady();
-                readyTimePromiseReject(`建连#${operationRound}(${reason})失败 ${e}`);
+                readyTimePromiseReject(`建连#${operationRound}(${reason})失败 ${str(e)}`);
                 if (!connectionEntry.reason) {
                     connectionEntry.reason = 'message sending failed';
                     connectionEntry.error = error2JSON(e);
@@ -733,7 +769,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     try {
                         isMatch = matcher.test(invokeContext.call);
                     } catch (e) {
-                        Log.e(`函数匹配器 ${matcher} 报错`, e);
+                        Log.e(`函数匹配器 ${str(matcher)} 报错`, e);
                         continue;
                     }
                     if (isMatch) {
@@ -851,22 +887,27 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 if (typeof name.test !== 'function') {
                     throw new TypeError(
                         zhOrEn(
-                            `nameMatcher.test(${name.test}) 不是函数。`,
-                            `nameMatcher.test(${name.test}) is not a function.`,
+                            `nameMatcher.test(${str(name.test)}) 不是函数。`,
+                            `nameMatcher.test(${str(name.test)}) is not a function.`,
                         ),
                     );
                 }
                 nameOrMatcher = name as any;
             } else {
-                nameOrMatcher = String(name);
+                if (typeof name !== 'string') {
+                    throw new TypeError(
+                        zhOrEn(`name(${str(name)}) 不是字符串。`, `name(${str(name)}) is not a string.`),
+                    );
+                }
+                nameOrMatcher = name;
             }
 
             const fun$existing = nameOrMatcher2function.get(nameOrMatcher);
             if (fun$existing) {
                 if (fun$existing !== fun) {
-                    throw new Error(`订阅失败。请先取消对: ${nameOrMatcher} 的上次订阅。`);
+                    throw new Error(`订阅失败。请先取消对: ${str(nameOrMatcher)} 的上次订阅。`);
                 } else {
-                    Log.w(`重复订阅: ${nameOrMatcher}, 已忽略。`);
+                    Log.w(`重复订阅: ${str(nameOrMatcher)}, 已忽略。`);
                     return;
                 }
             }
@@ -876,7 +917,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 nameMatcherList.push(nameOrMatcher);
             }
 
-            Log.v(`已订阅: ${nameOrMatcher}。`);
+            Log.v(`已订阅: ${str(nameOrMatcher)}。`);
         },
 
         off(name: any) {
@@ -892,9 +933,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     nameMatcherList.splice(index, 1);
                 }
                 delete nameMatcherList[index];
-                Log.v(`已取消订阅: ${nameOrMatcher}`);
+                Log.v(`已取消订阅: ${str(nameOrMatcher)}`);
             } else {
-                Log.w(`未订阅: ${nameOrMatcher}, 无需取消。`);
+                Log.w(`未订阅: ${str(nameOrMatcher)}, 无需取消。`);
             }
         },
 
