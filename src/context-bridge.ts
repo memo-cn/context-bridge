@@ -33,7 +33,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     let remoteTag = '';
 
     // 本地 tag
-    let localTag = '';
+    let localTag = String(options?.tag ?? '');
 
     //////////////////////////////////////////////////////////////////
 
@@ -933,7 +933,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     nameMatcherList.splice(index, 1);
                 }
                 delete nameMatcherList[index];
-                Log.v(`已取消订阅: ${str(nameOrMatcher)}`);
+                Log.v(`已取消订阅: ${str(nameOrMatcher)} 。`);
             } else {
                 Log.w(`未订阅: ${str(nameOrMatcher)}, 无需取消。`);
             }
