@@ -14,7 +14,7 @@ to="/Users/${USER}/Desktop/my-project/node_modules"
 ############################# 不用编辑下面的脚本 #############################
 
 # 当前脚本所在路径
-DIR=$(cd -P `dirname $0` && pwd)
+DIR=$(cd -P $(dirname "$0") && pwd)
 
 # 包所在的路径
 from=$(dirname "$DIR")
@@ -27,8 +27,16 @@ to="$to/$(node -p "require('./package.json').name")"
 # 格式化代码
 npm run "sdk:lint-fix"
 
+if [[ "$?" != "0" ]]; then
+  exit
+fi
+
 # 编译项目
 npm run "sdk:build"
+
+if [[ "$?" != "0" ]]; then
+  exit
+fi
 
 # 导入脚本函数
 . "${DIR}/npmlink.sh"
@@ -36,3 +44,4 @@ npm run "sdk:build"
 # 调用 npm pack 本地打包 SDK, 并解压至本地项目
 npmlink "$from" "$to"
 
+echo -e "\n已安装至" "$to"

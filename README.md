@@ -71,7 +71,7 @@ function sqrt(num: number): number {
 var value = await mainBridge.invoke('sqrt', 9);
 ```
 
-如果提供函数签名，出入参会得到类型提示和约束。
+如果提供函数签名，入参和返回值会得到类型提示和约束。
 
 ```typescript
 declare function sqrt(num: number): number;
@@ -208,23 +208,21 @@ var bridge = createContextBridge({
 });
 ```
 
-### 组合实例
+### 负载均衡
 
-#### 一主多从
+如果需要在一个主执行环境中与多个幂等的子执行环境通信，那么可以将实例进行组合，并使调用任务尽可能被转发到空闲的实例上。
 
-如果需要在一个执行环境中与多个幂等的执行环境通信，例如主线程与多个 Worker 线程，你可以使用组合实例的方式，将任务调用转发给任意一个可用的上下文桥实例。
-
-例如，在主线程中创建 3 个 Worker 线程，并分别创建与它们对应的上下文桥实例：
+例如，在主线程中创建多个子线程，并分别创建与它们对应的上下文桥实例：
 
 ```typescript
-const bridgeList = Array.from({ length: 3 },
+const bridgeList = Array(3).map(
     () => createContextBridge({
         createChannel: () => new Worker("./worker.js"),
         onChannelClose: (oldWorker) => oldWorker.terminate()
     }));
 ```
 
-然后，定义一个函数，用于寻找一个当前信道打开，没有函数调用任务的上下文桥实例，如果没有则随机选择一个：
+然后，实现负载均衡算法。用于寻找一个信道打开，没有调用任务的上下文桥实例。如果都不符合条件，则随机选择一个：
 
 ```typescript
 function findAvailableBridge() {
@@ -234,7 +232,7 @@ function findAvailableBridge() {
 }
 ```
 
-最后，用 Proxy 实现组合实例，拦截属性或方法的访问，并转发给可用的上下文桥实例：
+最后，封装一个虚拟实例，在内部将调用任务转发给空闲的上下文桥实例：
 
 ```typescript
 const combinedBridge: ContextBridgeInstance = new Proxy({}, {
@@ -312,19 +310,35 @@ biz 参数要么都设置且相同，要么都不设置。
 
 上下文桥实例是一个对象，包含以下属性和方法：
 
-#### on
+#### addInvokeListener
 
-方法，用于订阅或注册函数。接收一个函数名（字符串，或实现了函数名匹配器接口的自定义对象，例如正则表达式）和一个函数实现作为参数。
+方法，用于订阅函数。可以接收一个函数名或匹配器（字符串或实现名称匹配器接口的自定义实例，例如正则表达式），和一个监听器（函数实现）作为参数。
 
 -   该方法用于在当前上下文中订阅一个函数，使其可以被另一个上下文通过 invoke 方法调用。
--   订阅函数的时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。
--   当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，如果没有匹配到，再按订阅顺序使用函数名匹配器进行匹配。
--   函数名匹配器接口包含 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。
--   如果函数实现不是箭头函数，你可以通过 this.call 属性获取到实际调用的函数名。
+-   订阅时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。
+-   当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，再按订阅顺序使用名称匹配器进行匹配。
+-   名称匹配器包含 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。
+-   如果监听器不是箭头函数，可以在其内部通过 this.call 属性获取到调用名。
+
+#### getInvokeEntries
+
+方法，用于获取所有的订阅信息。返回一个数组，每个元素是函数名或匹配器，和监听器组成的元组。
+
+#### removeInvokeListener
+
+方法，用于取消函数订阅。接收函数名或匹配器作为参数。
+
+#### removeAllInvokeListeners
+
+方法，用于取消所有的函数订阅。
+
+#### on
+
+方法，用于订阅函数。同 addInvokeListener 。
 
 #### off
 
-方法，用于取消订阅或卸载函数。接收一个参数，即函数名。
+方法，用于取消函数订阅。同 removeInvokeListener 。
 
 #### invoke
 
@@ -338,10 +352,6 @@ biz 参数要么都设置且相同，要么都不设置。
 #### isInvoking
 
 属性，表示是否正在进行函数调用。如果信道上有未完成的函数调用，该属性为 true，否则为 false。
-
-#### getPerformanceEntries
-
-方法，返回自创建上下文桥实例以来所有事件的性能指标列表。
 
 #### channelState
 

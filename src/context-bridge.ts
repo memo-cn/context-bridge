@@ -4,7 +4,15 @@ import { LogLevel } from './options';
 import type { ContextBridgeInstance, NameMatcher } from './instance';
 import type { DetailedInvokeResult, Func, InvokeContext, InvokeOptions } from './invoke';
 
-import { deepClone, error2JSON, isObject, JSON2error, MAX_TIMEOUT_VALUE, setExponentialInterval, str } from './utils';
+import {
+    serializeException,
+    isObject,
+    deserializeException,
+    MAX_TIMEOUT_VALUE,
+    setExponentialInterval,
+    str,
+    error2JSON,
+} from './utils';
 import * as Message from './message';
 
 interface MessageEvent {
@@ -346,7 +354,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         if (id === Number.MAX_SAFE_INTEGER) {
             id = invokeIdCount = 0;
         }
-        Log.v(`开始调用$${id}`, name);
+        Log.v(`开始调用$${id}`, `${name}, 入参`, args);
         const m: Message.Call = Message.addNamespaceParams(
             {
                 id,
@@ -406,24 +414,16 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「开始」资源 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
     // 上下文桥性能指标
-    const contextBridgePerformanceEntries: ContextBridgePerformanceEntry[] = [];
-
-    // 新增指标时, 进行回调。
-    {
-        const realPush = contextBridgePerformanceEntries.push;
-        contextBridgePerformanceEntries.push = function pushPerformanceEntries(
-            ...entries: ContextBridgePerformanceEntry[]
-        ) {
-            for (const entry of entries) {
-                try {
-                    onPerformanceEntry(entry);
-                } catch (e) {
-                    Log.e(e);
-                }
+    const contextBridgePerformanceEntries = {
+        // 新增指标时, 进行回调。
+        push: function pushPerformanceEntries(entry: ContextBridgePerformanceEntry) {
+            try {
+                onPerformanceEntry(entry);
+            } catch (e) {
+                Log.e(e);
             }
-            return Reflect.apply(realPush, contextBridgePerformanceEntries, entries);
-        };
-    }
+        },
+    };
 
     // 信道状态、原因
     let channelState: 'connecting' | 'open' | 'closed' = 'closed';
@@ -467,7 +467,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     // 当前 id
     let invokeIdCount = 0;
 
-    // 注册的 name → 函数
+    // 订阅的 name → 函数
     const nameOrMatcher2function = new Map<string | NameMatcher, (...args: any) => any>();
 
     // 函数名匹配器
@@ -781,49 +781,71 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 }
             }
 
-            let return_: any;
-            let throw_: Error | undefined;
-            let reason: InvokeEntry['reason'] | undefined;
-            let startTime = 0;
-            let endTime = 0;
+            Log.v(`开始执行$${data.id}`, data.call + ', 入参', data.args);
+
+            let startTime = Date.now();
+            const setResult = (arg: { error: any; reason: InvokeEntry['reason'] } | { return: any }) => {
+                const executionDuration = Date.now() - startTime;
+                // 执行是否发生错误
+                let errorOccurred: boolean;
+                let logValue: any;
+
+                const returnOrThrow: Message.ReturnOrThrow = Message.addNamespaceParams(
+                    {
+                        id: data.id,
+                        executionDuration,
+                    },
+                    { biz },
+                );
+
+                if ('return' in arg) {
+                    errorOccurred = false;
+                    (returnOrThrow as Message.Return).return = logValue = arg.return;
+                } else {
+                    errorOccurred = true;
+                    (returnOrThrow as Message.Throw).throw = serializeException((logValue = arg.error));
+                    (returnOrThrow as Message.Throw).reason = arg.reason;
+                }
+
+                (errorOccurred ? Log.e : Log.v)(
+                    `结束执行$${data.id}`,
+                    data.call + ',',
+                    '耗时',
+                    executionDuration,
+                    `毫秒, ${errorOccurred ? '报错' : '返回'}`,
+                    logValue,
+                );
+
+                channel.postMessage(returnOrThrow);
+            };
+
             if (!fun) {
-                const message = zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call);
-                throw_ = new Error(`[${localTag}] ` + message);
-                reason = 'function not subscribed';
-                Log.e(`结束执行$${data.id}`, data.call + ',', '报错', message);
+                setResult({
+                    error: new Error(`[${localTag}] ` + zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call)),
+                    reason: 'function not subscribed',
+                });
             } else {
                 try {
-                    Log.v(`开始执行$${data.id}`, data.call);
-                    startTime = Date.now();
-                    return_ = await Reflect.apply(fun, invokeContext, data.args);
-                    endTime = Date.now();
-                    Log.v(`结束执行$${data.id}`, data.call + ',', '耗时', endTime - startTime, '毫秒。');
+                    setResult({
+                        return: await Reflect.apply(fun, invokeContext, data.args),
+                    });
                 } catch (e: any) {
-                    endTime = Date.now();
-                    throw_ = e;
-                    reason = 'function execution error';
-                    Log.e(`结束执行$${data.id}`, data.call + ',', '报错', e);
+                    setResult({
+                        reason: 'function execution error',
+                        error: e,
+                    });
                 }
             }
-            const r_: Message.Return = Message.addNamespaceParams(
-                {
-                    id: data.id,
-                    return: return_,
-                    executionDuration: endTime - startTime,
-                },
-                { biz },
-            );
-            if (throw_) {
-                r_.throw = error2JSON(throw_);
-                r_.reason = reason;
-            }
-            channel.postMessage(r_);
-        } else if (Message.isReturn(data, biz)) {
+        } else if (Message.isReturnOrThrow(data, biz)) {
             const invokeInfo = id2invokeInfo.get(data.id);
+            id2invokeInfo.delete(data.id);
+
             if (invokeInfo) {
                 const responseDuration = Date.now() - invokeInfo.createdTime;
-                Log.v(`结束调用$${data.id}`, invokeInfo.funName + ',', '耗时', responseDuration, '毫秒。');
-                id2invokeInfo.delete(data.id);
+
+                // 执行是否发生错误
+                let errorOccurred = false;
+                let logValue: any;
 
                 const callEntry: InvokeEntry = Message.addNamespaceParams(
                     {
@@ -838,19 +860,17 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     { biz },
                 );
 
-                if (data.throw) {
-                    const err = JSON2error(data.throw);
-
-                    invokeInfo.callbackPromise.reject(err);
-
+                if (Message.isThrow(data)) {
+                    errorOccurred = true;
                     callEntry.result = 'failure';
-                    if (data.reason) {
-                        callEntry.reason = data.reason;
-                    }
-                    callEntry.error = data.throw;
-                } else {
+                    callEntry.reason = data.reason;
+                    const error = (logValue = deserializeException(data.throw));
+                    callEntry.error = error2JSON(error);
+                    invokeInfo.callbackPromise.reject(error);
+                } else if (Message.isReturn(data)) {
+                    errorOccurred = false;
                     const invokeResult: DetailedInvokeResult = {
-                        result: data.return,
+                        result: (logValue = data.return),
                         executionDuration: data.executionDuration,
                         responseDuration,
                     };
@@ -858,6 +878,14 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 }
 
                 contextBridgePerformanceEntries.push(callEntry);
+
+                (errorOccurred ? Log.e : Log.v)(
+                    `结束调用$${data.id}`,
+                    invokeInfo.funName + ', 耗时',
+                    responseDuration,
+                    `毫秒, ${errorOccurred ? '报错' : '返回'}`,
+                    logValue,
+                );
             } else {
                 Log.w(
                     `多个上下文实例间接共用同一个信道, 请为不同实例指定不同的 channelId; Return id=${data.id} 没有对应的 Call.`,
@@ -874,80 +902,114 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
     }
 
-    const instance: ContextBridgeInstance = {
-        on<Fun extends Func = Func>(name: any, fun: Fun) {
-            checkArgumentsCount(arguments, 2);
+    /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「开始」上下文桥实例 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
 
-            if (typeof fun !== 'function') {
-                throw new Error(zhOrEn('fun 参数应为函数。', 'fun argument should be a function.'));
+    const addInvokeListener: ContextBridgeInstance['addInvokeListener'] = function on<Fun extends Func = Func>(
+        name: any,
+        listener: Fun,
+        options?: { override: boolean },
+    ) {
+        checkArgumentsCount(arguments, 2);
+
+        if (typeof listener !== 'function') {
+            throw new Error(zhOrEn('listener 参数应为函数。', 'listener argument should be a function.'));
+        }
+
+        let nameOrMatcher: string | NameMatcher = '';
+        if (isObject(name)) {
+            if (typeof name.test !== 'function') {
+                throw new TypeError(
+                    zhOrEn(
+                        `nameMatcher.test(${str(name.test)}) 不是函数。`,
+                        `nameMatcher.test(${str(name.test)}) is not a function.`,
+                    ),
+                );
             }
-
-            let nameOrMatcher: string | NameMatcher = '';
-            if (isObject(name)) {
-                if (typeof name.test !== 'function') {
-                    throw new TypeError(
-                        zhOrEn(
-                            `nameMatcher.test(${str(name.test)}) 不是函数。`,
-                            `nameMatcher.test(${str(name.test)}) is not a function.`,
-                        ),
-                    );
-                }
-                nameOrMatcher = name as any;
-            } else {
-                if (typeof name !== 'string') {
-                    throw new TypeError(
-                        zhOrEn(`name(${str(name)}) 不是字符串。`, `name(${str(name)}) is not a string.`),
-                    );
-                }
-                nameOrMatcher = name;
+            nameOrMatcher = name as any;
+        } else {
+            if (typeof name !== 'string') {
+                throw new TypeError(zhOrEn(`name(${str(name)}) 不是字符串。`, `name(${str(name)}) is not a string.`));
             }
+            nameOrMatcher = name;
+        }
 
-            const fun$existing = nameOrMatcher2function.get(nameOrMatcher);
-            if (fun$existing) {
-                if (fun$existing !== fun) {
-                    throw new Error(`订阅失败。请先取消对: ${str(nameOrMatcher)} 的上次订阅。`);
+        if (options !== null && options !== void 0) {
+            if (!isObject(options)) {
+                throw new TypeError(
+                    zhOrEn(`options(${str(options)}) 不是对象。`, `options(${str(options)}) is not a object.`),
+                );
+            }
+        }
+        let isOverridden = false;
+        let canOverride = checkBooleanArgument(options?.override, false, 'options.override');
+
+        const fun$existing = nameOrMatcher2function.get(nameOrMatcher);
+        if (fun$existing) {
+            if (fun$existing !== listener) {
+                if (canOverride) {
+                    // 移除先前的监听器。
+                    nameOrMatcher2function.delete(nameOrMatcher);
+                    const index = nameMatcherList.indexOf(nameOrMatcher as NameMatcher);
+                    if (index >= 0) {
+                        nameMatcherList.splice(index, 1);
+                    }
                 } else {
-                    Log.w(`重复订阅: ${str(nameOrMatcher)}, 已忽略。`);
-                    return;
+                    throw new Error(`订阅失败。请先取消对: ${str(nameOrMatcher)} 的上次订阅。`);
                 }
-            }
 
-            nameOrMatcher2function.set(nameOrMatcher, fun);
-            if (typeof nameOrMatcher !== 'string') {
-                nameMatcherList.push(nameOrMatcher);
-            }
-
-            Log.v(`已订阅: ${str(nameOrMatcher)}。`);
-        },
-
-        off(name: any) {
-            checkArgumentsCount(arguments, 1);
-
-            const name$string = String(name);
-            const index = nameMatcherList.indexOf(name);
-
-            const nameOrMatcher: string | NameMatcher = typeof name === 'string' ? name$string : name;
-
-            if (nameOrMatcher2function.has(name$string) || index >= 0) {
-                nameOrMatcher2function.delete(name$string);
-                if (index >= 0) {
-                    nameMatcherList.splice(index, 1);
-                }
-                Log.v(`已取消订阅: ${str(nameOrMatcher)} 。`);
+                isOverridden = true;
             } else {
-                Log.w(`未订阅: ${str(nameOrMatcher)}, 无需取消。`);
+                Log.v(`重复订阅: ${str(nameOrMatcher)}, 已忽略。`);
+                return;
             }
+        }
+
+        nameOrMatcher2function.set(nameOrMatcher, listener);
+        if (typeof nameOrMatcher !== 'string') {
+            nameMatcherList.push(nameOrMatcher);
+        }
+
+        Log.v(`已${isOverridden ? '覆盖' : ''}订阅: ${str(nameOrMatcher)}。`);
+    };
+
+    const removeInvokeListener: ContextBridgeInstance['removeInvokeListener'] = function (name: any) {
+        checkArgumentsCount(arguments, 1);
+
+        const name$string = String(name);
+        const index = nameMatcherList.indexOf(name);
+
+        const nameOrMatcher: string | NameMatcher = typeof name === 'string' ? name$string : name;
+
+        if (nameOrMatcher2function.has(name$string) || index >= 0) {
+            nameOrMatcher2function.delete(name$string);
+            if (index >= 0) {
+                nameMatcherList.splice(index, 1);
+            }
+            Log.v(`已取消订阅: ${str(nameOrMatcher)}。`);
+        } else {
+            Log.v(`未订阅: ${str(nameOrMatcher)}, 无需取消。`);
+        }
+    };
+
+    const instance: ContextBridgeInstance = {
+        addInvokeListener,
+        getInvokeEntries() {
+            return [...nameOrMatcher2function.entries()];
         },
+        removeInvokeListener,
+        removeAllInvokeListeners() {
+            nameOrMatcher2function.clear();
+            nameMatcherList.length = 0;
+        },
+
+        on: addInvokeListener,
+        off: removeInvokeListener,
 
         invoke,
         invokeWithDetail,
 
         get isInvoking() {
             return id2invokeInfo.size > 0;
-        },
-
-        getPerformanceEntries() {
-            return deepClone(contextBridgePerformanceEntries);
         },
 
         get channelState() {
@@ -966,6 +1028,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             operateChannel(reason, 'close');
         },
     };
+
+    /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「结束」上下文桥实例 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
 
     instance.reloadChannel(zhOrEn('初始化', 'initialization'));
 

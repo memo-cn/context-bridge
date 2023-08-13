@@ -1,8 +1,8 @@
-import { ContextBridgePerformanceEntry } from './performance';
+// import { ContextBridgePerformanceEntry } from './performance';
 import { Func, Invoke, InvokeContext, InvokeWithDetail } from './invoke';
 import { ChannelState } from './options';
 
-/** 函数名匹配器 */
+/** 名称匹配器 */
 export type NameMatcher = {
     /**
      * **匹配规则**
@@ -15,32 +15,66 @@ export type NameMatcher = {
 /** 上下文桥实例 */
 export type ContextBridgeInstance = {
     /**
-     * **订阅（注册）函数**
-     * @param name 函数名，可以是字符串或实现了函数名匹配器接口的自定义实例，例如正则表达式（RegExp）。
-     * @param fun 函数实现
+     * **订阅函数**
+     * @param name 函数名或匹配器。字符串或实现名称匹配器接口的自定义实例，例如正则表达式（RegExp）。
+     * @param listener 监听器，函数实现。
+     * @param {{ override: boolean }} [options] - 订阅选项
+     * @param {boolean} [options.override=false] - 函数名已被占用时，是否覆盖订阅。默认否。
      * @description
      *
      *     - 该方法用于在当前上下文中订阅一个函数，使其可以被另一个上下文通过 invoke 方法调用。<br>
-     *     - 订阅函数的时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。<br>
-     *     - 当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，如果没有匹配到，再按订阅顺序使用函数名匹配器进行匹配。<br>
-     *     - 函数名匹配器接口包含 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。<br>
-     *     - 如果函数实现不是箭头函数，你可以通过 this.call 属性获取到实际调用的函数名。
+     *     - 订阅时机和信道状态无关，即使信道关闭或重启，已订阅的函数也不会丢失。<br>
+     *     - 当另一个上下文调用 invoke 方法时，会先尝试按字符串匹配函数名，再按订阅顺序使用名称匹配器进行匹配。<br>
+     *     - 名称匹配器包含 test(name: string) => boolean 方法，用于检测给定的函数名是否匹配。<br>
+     *     - 如果监听器不是箭头函数，可以在其内部通过 this.call 属性获取到调用名。
      */
-    on: <Fun extends Func = Func>(
+    addInvokeListener: <Fun extends Func = Func>(
         name: string | NameMatcher,
-        fun: (this: InvokeContext, ...args: Parameters<Fun>) => ReturnType<Fun>,
+        listener: (this: InvokeContext, ...args: Parameters<Fun>) => ReturnType<Fun>,
+        options?: {
+            /**
+             * 函数名已被占用时，是否覆盖订阅。默认否。
+             * @description
+             *     - 如果为否，将抛出错误，订阅失败。
+             *     - 如果为是，将取消之前的订阅。
+             * */
+            override: boolean;
+        },
     ) => void;
 
     /**
-     * **取消订阅（卸载）函数**
-     * @param name 函数名
+     * **订阅函数**
+     * @description 同 addInvokeListener 。
      */
-    off: (name: string | NameMatcher) => void;
+    on: ContextBridgeInstance['addInvokeListener'];
+
+    /**
+     * **获取所有的订阅信息**
+     * @returns 返回一个数组，每个元素是函数名或匹配器，和监听器组成的元组。
+     */
+    getInvokeEntries: () => [string | NameMatcher, Func][];
+
+    /**
+     * **取消函数订阅**
+     * @param name 函数名或匹配器。
+     */
+    removeInvokeListener: (name: string | NameMatcher) => void;
+
+    /**
+     * **取消函数订阅**
+     * @description 同 removeInvokeListener 。
+     */
+    off: ContextBridgeInstance['removeInvokeListener'];
+
+    /**
+     * **取消所有的函数订阅**
+     */
+    removeAllInvokeListeners: () => void;
 
     /**
      * **调用在另一个上下文订阅的函数**
      * @description
-     *     可以在创建上下文桥实例后立即调用函数。<br>
+     *     可以在创建上下文桥实例后立即进行调用。<br>
      *     如果信道处于 connecting 状态，调用操作会被暂时挂起。
      * @returns 返回一个 Promise 对象，其值为调用结果。
      * */
@@ -58,11 +92,11 @@ export type ContextBridgeInstance = {
      */
     isInvoking: boolean;
 
-    /**
-     * **获取性能指标列表**
-     * @returns 返回自创建上下文桥实例以来所有事件的性能指标列表。
-     */
-    getPerformanceEntries: () => ContextBridgePerformanceEntry[];
+    // /**
+    //  * **获取性能指标列表**
+    //  * @returns 返回自创建上下文桥实例以来所有事件的性能指标列表。
+    //  */
+    // getPerformanceEntries: () => ContextBridgePerformanceEntry[];
 
     /** 信道的当前状态 */
     channelState: ChannelState;

@@ -2,6 +2,44 @@
 export const MAX_TIMEOUT_VALUE = 2 ** 31 - 1;
 
 /**
+ * 序列化的异常
+ * Error, 存储到 json 字段，否则存储到 value 字段。
+ */
+export type SerializedException =
+    | {
+          json: JSONError;
+      }
+    | {
+          value: any;
+      };
+
+// 序列化异常
+export function serializeException(e: any): SerializedException {
+    if (e instanceof Error) {
+        return {
+            json: error2JSON(e),
+        };
+    } else {
+        return {
+            value: e,
+        };
+    }
+}
+
+// 反序列化异常
+export function deserializeException(e: SerializedException): any {
+    if (!isObject(e)) {
+        return e;
+    }
+    if ('json' in e) {
+        return JSON2error(e.json);
+    } else if ('value' in e) {
+        return e.value;
+    }
+    return e;
+}
+
+/**
  * 用 JSON 对象表示的错误类型
  */
 export type JSONError = {
@@ -16,11 +54,10 @@ export type JSONError = {
 /**
  * 把任意类型的错误转换成 JSON 对象
  */
-export function error2JSON(e: any): JSONError | undefined {
-    if (!e) return; // 如果没有错误, 返回 undefined
+export function error2JSON(e: Error | any): JSONError {
     try {
         // 如果 e 是 Error 类型, 就直接用它, 否则用 e 创建一个新的 Error 对象
-        const err = e instanceof Error ? e : new Error(e);
+        const err = (e as any) instanceof Error ? e : new Error(e as any);
         // 返回一个包含错误属性的 JSON 对象
         return {
             name: String(err?.name),

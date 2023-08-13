@@ -1,13 +1,14 @@
-import type { JSONError } from './utils';
+import type { SerializedException } from './utils';
 import type { InvokeEntry } from './performance';
 import { isObject } from './utils';
+import { version } from '../package.json';
 
 // 命名空间信息
 const ns = {
     key: '__context-bridge',
     value: {
         // 上下文桥 SDK 的版本
-        version: '0.0.2' as string,
+        version,
         // 业务标识
         biz: void 0 as undefined | string,
     },
@@ -62,15 +63,33 @@ export interface Call extends ContextBridgeMessage {
 }
 
 // 返回结果
-export interface Return extends ContextBridgeMessage {
+export interface Return extends ReturnOrThrow {
     id: any;
-    /**
-     * return 和 throw 字段二选一, 存在 throw 字段时, 也应存在 reason 字段
-     */
-    return?: any; // 执行结果;
-    throw?: JSONError; // 执行过程抛出的异常
-    reason?: InvokeEntry['reason']; // 执行异常的原因
+    return: any; // 执行结果;
+}
+
+// 返回报错
+export interface Throw extends ReturnOrThrow {
+    throw: SerializedException; // 执行过程抛出的异常
+    reason: InvokeEntry['reason']; // 执行异常的原因
+}
+
+export interface ReturnOrThrow extends ContextBridgeMessage {
+    id: any;
     executionDuration: number; // 执行耗时
+}
+
+export function isReturnOrThrow(data: any, biz: Biz): data is ReturnOrThrow {
+    if (!isMessage(data, biz)) return false;
+    return 'id' in data && ('return' in data || 'throw' in data);
+}
+
+export function isThrow(data: ReturnOrThrow): data is Throw {
+    return 'throw' in data;
+}
+
+export function isReturn(data: ReturnOrThrow): data is Return {
+    return !isThrow(data);
 }
 
 // 连接通知
@@ -101,9 +120,4 @@ export function isCall(data: any, biz: Biz): data is Call {
         return false;
     }
     return false;
-}
-
-export function isReturn(data: any, biz: Biz): data is Return {
-    if (!isMessage(data, biz)) return false;
-    return 'id' in data && ('return' in data || 'throw' in data);
 }

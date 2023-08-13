@@ -26,19 +26,23 @@ export type InvokeOptions = {
 };
 
 export type Invoke = {
-    <RemoteFunction extends Func = Func>(name: string, ...args: Parameters<RemoteFunction>): Promise<
-        Awaited<ReturnType<RemoteFunction>>
-    >;
-    <RemoteFunction extends Func = Func>(options: InvokeOptions, ...args: Parameters<RemoteFunction>): Promise<
-        Awaited<ReturnType<RemoteFunction>>
-    >;
+    <RemoteFunction extends Func = Func>(
+        name: string,
+        ...args: Parameters<RemoteFunction>
+    ): Promise<Awaited<ReturnType<RemoteFunction>>>;
+    <RemoteFunction extends Func = Func>(
+        options: InvokeOptions,
+        ...args: Parameters<RemoteFunction>
+    ): Promise<Awaited<ReturnType<RemoteFunction>>>;
 };
 
 export type InvokeWithDetail = {
-    <RemoteFunction extends Func = Func>(name: string, ...args: Parameters<RemoteFunction>): Promise<
-        DetailedInvokeResult<Awaited<ReturnType<RemoteFunction>>>
-    >;
-    <RemoteFunction extends Func = Func>(options: InvokeOptions, ...args: Parameters<RemoteFunction>): Promise<
-        DetailedInvokeResult<Awaited<ReturnType<RemoteFunction>>>
-    >;
+    <RemoteFunction extends Func = Func>(
+        name: string,
+        ...args: Parameters<RemoteFunction>
+    ): Promise<DetailedInvokeResult<Awaited<ReturnType<RemoteFunction>>>>;
+    <RemoteFunction extends Func = Func>(
+        options: InvokeOptions,
+        ...args: Parameters<RemoteFunction>
+    ): Promise<DetailedInvokeResult<Awaited<ReturnType<RemoteFunction>>>>;
 };
