@@ -1,6 +1,5 @@
-// import { ContextBridgePerformanceEntry } from './performance';
-import { Func, Invoke, InvokeContext, InvokeWithDetail } from './invoke';
-import { ChannelState } from './options';
+import type { Func, Invoke, InvokeContext, InvokeWithDetail } from './invoke';
+import type { ChannelState, ContextBridgeChannel, ContextBridgeOptions } from './options';
 
 /** 名称匹配器 */
 export type NameMatcher = {
@@ -92,12 +91,6 @@ export type ContextBridgeInstance = {
      */
     isInvoking: boolean;
 
-    // /**
-    //  * **获取性能指标列表**
-    //  * @returns 返回自创建上下文桥实例以来所有事件的性能指标列表。
-    //  */
-    // getPerformanceEntries: () => ContextBridgePerformanceEntry[];
-
     /** 信道的当前状态 */
     channelState: ChannelState;
 
@@ -116,4 +109,12 @@ export type ContextBridgeInstance = {
      * @description 信道关闭后，上下文桥实例不再处理该信道的消息。
      */
     closeChannel: (reason?: any) => void;
+
+    /**
+     * **更新上下文桥选项**
+     * @param patchOptions 新的选项会与实例当前的选项合并。
+     */
+    updateOptions: <C extends ContextBridgeChannel = ContextBridgeChannel>(
+        patchOptions: Partial<ContextBridgeOptions<C>>,
+    ) => void;
 };

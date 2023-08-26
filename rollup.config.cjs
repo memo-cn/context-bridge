@@ -33,9 +33,12 @@ const pkg = require('./package.json');
 
 const isProd = process.env.NODE_ENV !== 'development';
 
+// 仅在测试阶段生成 sourcemap 。
+const sourcemap = !isProd;
+
 const rollupOptions = [
     /** 声明文件 */
-    isProd && {
+    {
         input: './src/index.ts',
         output: [
             {
@@ -51,20 +54,20 @@ const rollupOptions = [
             {
                 format: 'es',
                 file: pkg.module,
-                sourcemap: true,
+                sourcemap,
                 plugins: isProd ? [plugins.terser, plugins.babel] : [],
             },
             isProd && {
                 format: 'commonjs',
                 file: pkg.main,
-                sourcemap: true,
+                sourcemap,
                 plugins: [plugins.terser, plugins.babel],
             },
             isProd && {
                 name: pkg.name,
                 format: 'umd',
                 file: pkg.main.replace(/\.common\.js$/, '.umd.js'),
-                sourcemap: true,
+                sourcemap,
                 plugins: [plugins.terser],
             },
             isProd && {
@@ -74,7 +77,7 @@ const rollupOptions = [
                 format: 'iife',
                 extend: false,
                 file: pkg.main.replace(/\.common\.js$/, '.iife.js'),
-                sourcemap: true,
+                sourcemap,
                 plugins: [plugins.terser],
             },
         ].filter((e) => e),

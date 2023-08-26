@@ -1,7 +1,8 @@
 import type { SerializedException } from './utils';
-import type { InvokeEntry } from './performance';
+
 import { isObject } from './utils';
 import { version } from '../package.json';
+import { InvokeEntry } from './types';
 
 // 命名空间信息
 const ns = {

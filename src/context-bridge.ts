@@ -1,18 +1,34 @@
-import type { ConnectionEntry, ContextBridgePerformanceEntry, InvokeEntry } from './performance';
-import type { ContextBridgeChannel, ContextBridgeOptions } from './options';
-import { LogLevel } from './options';
-import type { ContextBridgeInstance, NameMatcher } from './instance';
-import type { DetailedInvokeResult, Func, InvokeContext, InvokeOptions } from './invoke';
+import {
+    ConnectionEntry,
+    ContextBridgeChannel,
+    ContextBridgeInstance,
+    ContextBridgeOptions,
+    ContextBridgePerformanceEntry,
+    DetailedInvokeResult,
+    Func,
+    InvokeContext,
+    InvokeEntry,
+    InvokeOptions,
+    NameMatcher,
+} from './types';
 
 import {
-    serializeException,
-    isObject,
+    checkArgumentsCount,
+    checkBooleanArgument,
+    checkFunctionArgument,
+    checkObjectArgument,
+    checkOptions,
     deserializeException,
-    MAX_TIMEOUT_VALUE,
+    error2JSON,
+    isObject,
+    serializeException,
     setExponentialInterval,
     str,
-    error2JSON,
+    zhOrEn,
 } from './utils';
+
+import { LogLevel } from './types';
+
 import * as Message from './message';
 
 interface MessageEvent {
@@ -26,8 +42,9 @@ const channel2OperationRound = new WeakMap<ContextBridgeChannel, number>();
  * 创建 上下文桥
  */
 export function createContextBridge<C extends ContextBridgeChannel>(
-    options: ContextBridgeOptions<C>,
+    options$0: ContextBridgeOptions<C>,
 ): ContextBridgeInstance {
+    /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「开始」round 数据 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
     // 操作轮次（进入 operateChannel 函数的次数）。
     let operationRound = 0;
 
@@ -36,217 +53,28 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     // 被动触发建连时的远程 round
     let passiveRemoteRound = -1;
-
-    // 远程 tag
-    let remoteTag = '';
-
-    // 本地 tag
-    let localTag = String(options?.tag ?? '');
-
-    //////////////////////////////////////////////////////////////////
-
-    // 是否为中文
-    const isZh = String(
-        globalThis?.navigator?.language ||
-            (globalThis as any)?.process?.env?.LANG ||
-            (globalThis as any)?.process?.env?.LC_CTYPE,
-    )
-        .toLowerCase()
-        .includes('zh');
-
-    /**
-     * 根据浏览器语言设置返回相应的字符串。
-     * @param zh 简体中文字符串。
-     * @param en 英文字符串。
-     * @returns 如果浏览器语言设置为简体中文（zh-cn）, 则返回 zh 参数, 否则返回 en 参数。
-     */
-    function zhOrEn(zh: string, en: string) {
-        return isZh ? zh : en;
-    }
-
-    /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「开始」选项数据 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
-
-    // 业务标识
-    let biz: undefined | string = void 0;
-
-    // 日志级别
-    let logLevel = LogLevel.warning;
-
-    // 建连的超时时间。为 0 时不限制, 否则为超时时间。
-    let connectionTimeout = 0;
-
-    // 函数调用的超时时间。为 0 时不限制, 否则为超时时间。
-    let invokeTimeout = 0;
-
-    // 建连超时时是否重启信道
-    let reloadChannelOnConnectionFailure = true;
-
-    // 函数调用超时时是否重启信道
-    let reloadChannelOnInvokeTimeout = true;
-
-    // 当有新的性能指标产生时触发的回调方法
-    let onPerformanceEntry: (entries: ContextBridgePerformanceEntry) => void = function () {};
-
-    /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「结束」选项数据 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
+    /* ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○「结束」round 数据 ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ */
 
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「开始」选项参数校验 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
 
-    // 校验参数个数
-    function checkArgumentsCount(args: IArguments, count: number) {
-        if (args.length < count) {
-            throw new Error(
-                zhOrEn(
-                    `至少需要 ${count} 个参数, 但只传递了 ${args.length} 个。`,
-                    `At least ${count} argument required, but only ${args.length} passed.`,
-                ),
-            );
-        }
-    }
+    // 有一些选项在后续的运行阶段才校验
+    let options = options$0;
 
-    checkArgumentsCount(arguments, 1);
+    // 校验完成的选项对象
+    let trustedOptions: ReturnType<typeof checkOptions>;
 
-    if (!isObject(options)) {
-        throw new TypeError(zhOrEn(`options(${str(options)}) 不是对象。`, `options(${str(options)}) is not a object.`));
-    }
-    if (typeof options.createChannel !== 'function') {
-        throw new TypeError(
-            zhOrEn(
-                `options.createChannel(${str(options.createChannel)}) 不是函数。`,
-                `options.createChannel(${str(options.createChannel)}) is not a function.`,
-            ),
-        );
-    }
+    const updateOptions: ContextBridgeInstance['updateOptions'] = function (patchOptions) {
+        checkObjectArgument(patchOptions, 'patchOptions');
 
-    // 校验字符串合法性
-    function checkStringArgument<T>(value: any, default_: T, literal: string) {
-        if (value === null || value === void 0) {
-            return default_;
-        } else if (typeof value === 'string') {
-            return value;
-        } else {
-            throw new TypeError(
-                zhOrEn(`${literal}(${str(value)}) 不是字符串。`, `${literal}(${str(value)}) is not a string.`),
-            );
-        }
-    }
+        // 合并后的选项
+        const mergedOptions: ContextBridgeOptions<C> = Object.assign({}, options, patchOptions);
 
-    // 检验本地 tag
-    localTag = checkStringArgument(options.tag, '', 'options.tag');
+        trustedOptions = checkOptions(mergedOptions);
 
-    // 检验业务标识
-    biz = checkStringArgument(options.biz, void 0, 'options.biz');
+        options = mergedOptions;
+    };
 
-    /**
-     * 校验超时选项合法性
-     * @param value
-     * @param default_ 默认值
-     * @param literal 字面量
-     */
-    function checkTimeoutArgument(value: any, default_: number, literal: string): number {
-        // 默认超时时间为 5 秒
-        if (value === null || value === void 0) {
-            return default_;
-        }
-
-        // 非数值
-        if (typeof value !== 'number') {
-            throw new TypeError(
-                zhOrEn(`${literal}(${str(value)}) 不是数值。`, `${literal}(${str(value)}) is not a number.`),
-            );
-        }
-
-        if (value === 0) {
-            // 设为 0, 不限制。
-            return value;
-        }
-
-        if (value < 0) {
-            // 负数
-            throw new TypeError(
-                zhOrEn(
-                    `${literal}(${str(value)}) 不能为负数。`,
-                    `${literal}(${str(value)}) cannot be a negative number.`,
-                ),
-            );
-        }
-
-        if (value > MAX_TIMEOUT_VALUE) {
-            // 数值过大, 视为不限制。
-            return 0;
-        } else if (value <= MAX_TIMEOUT_VALUE) {
-            // 数值正常。
-            return value;
-        }
-
-        // 数值非法。
-        throw new TypeError(zhOrEn(`${literal}(${str(value)}) 非法。`, `${literal}(${str(value)}) is illegal.`));
-    }
-
-    connectionTimeout = checkTimeoutArgument(options.connectionTimeout, 5000, 'options.connectionTimeout');
-    invokeTimeout = checkTimeoutArgument(options.invokeTimeout, 5000, 'options.invokeTimeout');
-
-    /**
-     * 校验布尔值选项合法性
-     * @param value
-     * @param default_ 默认值
-     * @param literal 字面量
-     */
-    function checkBooleanArgument(value: any, default_: boolean, literal: string): boolean {
-        if (value === null || value === void 0) {
-            return default_;
-        }
-        if (typeof value === 'boolean') {
-            return value;
-        }
-        throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是布尔值。`, `${literal}(${str(value)}) is not a boolean.`),
-        );
-    }
-
-    // 建连超时时是否再次重启信道
-    reloadChannelOnConnectionFailure = checkBooleanArgument(
-        options.reloadChannelOnConnectionFailure,
-        true,
-        'options.reloadChannelOnConnectionFailure',
-    );
-
-    // 函数调用超时时是否自动重启信道
-    reloadChannelOnInvokeTimeout = checkBooleanArgument(
-        options.reloadChannelOnInvokeTimeout,
-        true,
-        'options.reloadChannelOnInvokeTimeout',
-    );
-
-    if (options.onPerformanceEntry !== null && options.onPerformanceEntry !== void 0) {
-        if (typeof options.onPerformanceEntry !== 'function') {
-            throw new TypeError(
-                zhOrEn(
-                    `options.onPerformanceEntry(${str(options.onPerformanceEntry)}) 不是函数。`,
-                    `options.onPerformanceEntry(${str(options.onPerformanceEntry)}) is not a function.`,
-                ),
-            );
-        } else {
-            onPerformanceEntry = options.onPerformanceEntry;
-        }
-    }
-
-    // 校验日志级别
-    if (options.logLevel) {
-        const arr = Object.keys(LogLevel).filter((x) => Number.isNaN(Number(x)));
-        if (!arr.includes(options.logLevel)) {
-            throw new TypeError(
-                zhOrEn(
-                    `options.logLevel(${str(options.logLevel)}) 有误, 应为 ${arr
-                        .map((x) => `'${x}'`)
-                        .join(', ')} 之一。`,
-                    `options.logLevel(${str(options.logLevel)}) is invalid, it should be one of ${arr
-                        .map((x) => `'${x}'`)
-                        .join(', ')}.`,
-                ),
-            );
-        }
-        logLevel = LogLevel[options.logLevel];
-    }
+    updateOptions({});
 
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「结束」选项参数校验 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
 
@@ -270,9 +98,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     // 日志记录器
     const Log = {
         v: function () {
-            if (logLevel >= LogLevel.verbose) {
-                if (localTag) {
-                    console.log(`%c ${localTag} %c`, logTagCSS, '', ...arguments);
+            if (trustedOptions.logLevel >= LogLevel.verbose) {
+                if (trustedOptions.localTag) {
+                    console.log(`%c ${trustedOptions.localTag} %c`, logTagCSS, '', ...arguments);
                 } else {
                     console.log(...arguments);
                 }
@@ -280,9 +108,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         } as typeof console.log,
 
         w: function () {
-            if (logLevel >= LogLevel.warning) {
-                if (localTag) {
-                    console.warn(`%c ${localTag} %c`, logTagCSS, '', ...arguments);
+            if (trustedOptions.logLevel >= LogLevel.warning) {
+                if (trustedOptions.localTag) {
+                    console.warn(`%c ${trustedOptions.localTag} %c`, logTagCSS, '', ...arguments);
                 } else {
                     console.warn(...arguments);
                 }
@@ -290,9 +118,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         } as typeof console.warn,
 
         e: function () {
-            if (logLevel >= LogLevel.error) {
-                if (localTag) {
-                    console.error(`%c ${localTag} %c`, logTagCSS, '', ...arguments);
+            if (trustedOptions.logLevel >= LogLevel.error) {
+                if (trustedOptions.localTag) {
+                    console.error(`%c ${trustedOptions.localTag} %c`, logTagCSS, '', ...arguments);
                 } else {
                     console.error(...arguments);
                 }
@@ -327,7 +155,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         // 调用指标
         const invokeEntry: InvokeEntry = Message.addNamespaceParams(
             {
-                tag: localTag,
+                tag: trustedOptions.localTag,
                 entryType: 'invoke',
                 startTime: Date.now(),
                 executionDuration: 0,
@@ -335,7 +163,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 call: name,
                 result: null!,
             },
-            { biz },
+            { biz: trustedOptions.biz },
         );
 
         try {
@@ -361,7 +189,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 call: name,
                 args,
             },
-            { biz },
+            { biz: trustedOptions.biz },
         );
 
         // 发送任务
@@ -370,15 +198,17 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
 
         return new Promise<DetailedInvokeResult<ReturnType<Awaited<RemoteFunction>>>>((resolve, reject) => {
-            const timeout = invokeTimeout;
+            const timeout = trustedOptions.invokeTimeout;
             if (timeout) {
                 setTimeout(() => {
                     if (id2invokeInfo.has(id)) {
                         // 超时未响应
 
-                        if (reloadChannelOnInvokeTimeout) {
+                        if (trustedOptions.reloadChannelOnInvokeTimeout) {
                             instance.reloadChannel(
-                                `${remoteTag ? remoteTag : 'remoteContext'}::${name} 超过 ${timeout} 毫秒未响应`,
+                                `${
+                                    trustedOptions.remoteTag ? trustedOptions.remoteTag : 'remoteContext'
+                                }::${name} 超过 ${timeout} 毫秒未响应`,
                             );
                         }
 
@@ -418,7 +248,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         // 新增指标时, 进行回调。
         push: function pushPerformanceEntries(entry: ContextBridgePerformanceEntry) {
             try {
-                onPerformanceEntry(entry);
+                trustedOptions.onPerformanceEntry(entry);
             } catch (e) {
                 Log.e(e);
             }
@@ -550,7 +380,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     setChannelState('closed', reason);
 
                     // 重试建连
-                    if (connectionEntry.reason !== 'connection cancelled' && reloadChannelOnConnectionFailure) {
+                    if (
+                        connectionEntry.reason !== 'connection cancelled' &&
+                        trustedOptions.reloadChannelOnConnectionFailure
+                    ) {
                         let interval = 1000 - connectionEntry.duration;
                         if (interval < 0) {
                             interval = 0;
@@ -569,13 +402,13 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         // 建连指标
         const connectionEntry: ConnectionEntry = Message.addNamespaceParams(
             {
-                tag: localTag,
+                tag: trustedOptions.localTag,
                 entryType: 'connection',
                 startTime: Date.now(),
                 duration: 0,
                 result: null!,
             },
-            { biz },
+            { biz: trustedOptions.biz },
         );
 
         // 获取新信道
@@ -610,19 +443,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         // 校验信道
         function checkChannel(channel: ContextBridgeChannel) {
-            if (!isObject(channel)) {
-                throw new TypeError(
-                    zhOrEn(`channel(${str(channel)}) 不是对象。`, `channel(${str(channel)}) is not a object.`),
-                );
-            }
-            if (typeof channel.postMessage !== 'function') {
-                throw new TypeError(
-                    zhOrEn(
-                        `channel.postMessage(${str(channel.postMessage)}) 不是函数。`,
-                        `channel.postMessage(${str(channel.postMessage)}) is not a function.`,
-                    ),
-                );
-            }
+            checkObjectArgument(channel, 'channel');
+            checkFunctionArgument(channel.postMessage, 'channel.postMessage');
         }
 
         // --------------------「结束」创建并校验信道 --------------------
@@ -644,7 +466,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             }
         });
 
-        const timeout = connectionTimeout;
+        const timeout = trustedOptions.connectTimeout;
         if (timeout) {
             const c$1 = operationRound;
             setTimeout(() => {
@@ -661,10 +483,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             try {
                 const m: Message.ConnectionNotification = Message.addNamespaceParams(
                     {
-                        tag: localTag,
+                        tag: trustedOptions.localTag,
                         round: operationRound,
                     },
-                    { biz },
+                    { biz: trustedOptions.biz },
                 );
                 channel.postMessage(m);
             } catch (e) {
@@ -682,13 +504,13 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         async function onConnection(ev: MessageEvent) {
             const data = ev.data;
             // 两个上下文的连接实际上已经建立好了
-            if (Message.isConnectionNotification(data, biz)) {
+            if (Message.isConnectionNotification(data, trustedOptions.biz)) {
                 // 记录远程tag
-                remoteTag = String(data.tag || '远程');
+                trustedOptions.remoteTag = String(data.tag || '远程');
                 // 记录远程轮次
                 remoteRound = data.round;
                 // 计算本地 tag 颜色
-                logOpposite = remoteTag > localTag;
+                logOpposite = trustedOptions.remoteTag > trustedOptions.localTag;
                 logTagCSS = getLogTagCSS();
                 // 在此上下文标记 ready
                 readyTimePromiseResolve(Date.now());
@@ -742,7 +564,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         const data = ev?.data;
 
         // 一条消息, 只能被处理一次
-        if (Message.isMessage(data, biz)) {
+        if (Message.isMessage(data, trustedOptions.biz)) {
             if (Message.isConsumed(data)) {
                 Log.w('多个上下文实例间接共用同一个信道, 请为不同实例指定不同的 channelId; 忽略已被消费的消息:', ev);
                 return;
@@ -754,7 +576,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             return;
         }
 
-        if (Message.isCall(data, biz)) {
+        if (Message.isCall(data, trustedOptions.biz)) {
             // 调用上下文
             const invokeContext: InvokeContext = {
                 call: String(data.call),
@@ -795,7 +617,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                         id: data.id,
                         executionDuration,
                     },
-                    { biz },
+                    { biz: trustedOptions.biz },
                 );
 
                 if ('return' in arg) {
@@ -821,7 +643,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
             if (!fun) {
                 setResult({
-                    error: new Error(`[${localTag}] ` + zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call)),
+                    error: new Error(
+                        `[${trustedOptions.localTag}] ` + zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call),
+                    ),
                     reason: 'function not subscribed',
                 });
             } else {
@@ -836,7 +660,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     });
                 }
             }
-        } else if (Message.isReturnOrThrow(data, biz)) {
+        } else if (Message.isReturnOrThrow(data, trustedOptions.biz)) {
             const invokeInfo = id2invokeInfo.get(data.id);
             id2invokeInfo.delete(data.id);
 
@@ -849,7 +673,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
                 const callEntry: InvokeEntry = Message.addNamespaceParams(
                     {
-                        tag: localTag,
+                        tag: trustedOptions.localTag,
                         entryType: 'invoke',
                         startTime: invokeInfo.createdTime,
                         executionDuration: data.executionDuration,
@@ -857,7 +681,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                         call: invokeInfo.funName,
                         result: 'success',
                     },
-                    { biz },
+                    { biz: trustedOptions.biz },
                 );
 
                 if (Message.isThrow(data)) {
@@ -892,7 +716,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     ev,
                 );
             }
-        } else if (Message.isConnectionNotification(data, biz)) {
+        } else if (Message.isConnectionNotification(data, trustedOptions.biz)) {
             if (data.round > remoteRound) {
                 if (passiveRemoteRound !== data.round) {
                     passiveRemoteRound = data.round;
@@ -910,21 +734,11 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         options?: { override: boolean },
     ) {
         checkArgumentsCount(arguments, 2);
-
-        if (typeof listener !== 'function') {
-            throw new Error(zhOrEn('listener 参数应为函数。', 'listener argument should be a function.'));
-        }
+        checkFunctionArgument(listener, 'listener');
 
         let nameOrMatcher: string | NameMatcher = '';
         if (isObject(name)) {
-            if (typeof name.test !== 'function') {
-                throw new TypeError(
-                    zhOrEn(
-                        `nameMatcher.test(${str(name.test)}) 不是函数。`,
-                        `nameMatcher.test(${str(name.test)}) is not a function.`,
-                    ),
-                );
-            }
+            checkFunctionArgument(name.test, 'nameMatcher.test');
             nameOrMatcher = name as any;
         } else {
             if (typeof name !== 'string') {
@@ -933,13 +747,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             nameOrMatcher = name;
         }
 
-        if (options !== null && options !== void 0) {
-            if (!isObject(options)) {
-                throw new TypeError(
-                    zhOrEn(`options(${str(options)}) 不是对象。`, `options(${str(options)}) is not a object.`),
-                );
-            }
-        }
+        checkObjectArgument(options, 'options', true);
+
         let isOverridden = false;
         let canOverride = checkBooleanArgument(options?.override, false, 'options.override');
 
@@ -1027,6 +836,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         closeChannel(reason = zhOrEn('手动停止信道', 'manually close the channel')) {
             operateChannel(reason, 'close');
         },
+
+        updateOptions,
     };
 
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「结束」上下文桥实例 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */

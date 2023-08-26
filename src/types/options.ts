@@ -1,4 +1,4 @@
-import { ContextBridgePerformanceEntry } from './performance';
+import type { ContextBridgePerformanceEntry } from './performance';
 
 /** 日志级别 */
 export enum LogLevel {
@@ -60,7 +60,7 @@ export type ContextBridgeChannel = {
 export type ChannelState = 'connecting' /** 连接中 */ | 'open' /** 已打开 */ | 'closed'; /** 已关闭 */
 
 /** 上下文桥 选项 */
-export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
+export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeChannel> = {
     /**
      * **上下文标识**
      * @description 在控制台打印的日志会带有上下文标识的前缀和颜色，以便区分不同的上下文桥实例。
@@ -109,14 +109,14 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel> = {
     /**
      * **建连的超时时间**
      * @description 如果超过此时间没有建连完成，建连动作失败。
-     * 以毫秒为单位，默认为 5 秒。如果为 0, null, undefined 或 Infinity 则不限制建连时长。
+     * 以毫秒为单位，默认为 5 秒。如果为 0 或 Infinity 则不限制建连时长。
      */
-    connectionTimeout?: number | null;
+    connectTimeout?: number | null;
 
     /**
      * **函数调用的超时时间**
      * @description 如果超过此时间没有响应结果，调用失败。
-     * 以毫秒为单位，默认为 5 秒。如果为 0, null, undefined 或 Infinity 则不限制调用时长。
+     * 以毫秒为单位，默认为 5 秒。如果为 0 或 Infinity 则不限制调用时长。
      */
     invokeTimeout?: number | null;
 
