@@ -16,7 +16,9 @@
         "sdk:publish-to-npm": "npm run 'sdk:build' && if [[ -d ./dist ]]; then npm publish; else echo '请先编译出产物，再发包。'; fi",
         "sdk:install-to-path": "bash scripts/install-to-path.sh",
         "demo:serve": "serve .",
-        "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js"
+        "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js",
+        "docs:dev": "vuepress dev docs",
+        "docs:build": "vuepress build docs"
     },
     "devDependencies": {
         "@babel/preset-env": "^7.22.10",
@@ -39,6 +41,7 @@
         "rollup-plugin-typescript2": "^0.35.0",
         "serve": "^14.2.1",
         "typescript": "^5.2.2",
+        "vuepress": "^2.0.0-beta.66",
         "ws": "^8.13.0"
     },
     "files": [
