@@ -19,6 +19,7 @@ export default defineUserConfig({
     },
     theme: defaultTheme({
         repo: 'https://github.com/memo-cn/context-bridge',
+        contributors: false,
         locales: {
             '/en-US/': {
                 editLinkText: 'Edit',
@@ -26,12 +27,14 @@ export default defineUserConfig({
                 selectLanguageName: 'English',
             },
             '/zh-CN/': {
-                editLinkText: '编辑',
+                editLinkText: '编辑此页',
+                lastUpdatedText: '上次更新',
                 selectLanguageName: '简体中文',
                 navbar: [
                     {
                         text: '指南',
                         link: '/zh-CN/guide/快速开始.md',
+                        activeMatch: '/zh-CN/guide/',
                     },
                     {
                         text: 'API',
