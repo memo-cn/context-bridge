@@ -1,8 +1,76 @@
 {
-  "private": true,
-  "workspaces": [
-    "context-bridge",
-    "demo"
-  ],
-  "license": "MIT"
+    "name": "context-bridge",
+    "private": false,
+    "version": "0.0.2",
+    "description": "上下文桥（Context Bridge）是一种支持不同 JavaScript 执行环境之间相互调用的机制。Context Bridge is a mechanism that enables different JavaScript execution environments to invoke each other.",
+    "homepage": "https://github.com/memo-cn/context-bridge",
+    "main": "./dist/context-bridge.common.js",
+    "module": "./dist/context-bridge.es.js",
+    "types": "./dist/context-bridge.es.d.ts",
+    "scripts": {
+        "sdk:dev": "rimraf ./dist/* && cross-env NODE_ENV=development rollup -wc",
+        "sdk:build": "rimraf ./dist/* && rollup -c",
+        "sdk:clean": "rimraf ./dist/*",
+        "sdk:lint-check": "eslint . && prettier --check .",
+        "sdk:lint-fix": "eslint --fix . && prettier --write .",
+        "sdk:publish-to-npm": "npm run 'sdk:build' && if [[ -d ./dist ]]; then npm publish; else echo '请先编译出产物，再发包。'; fi",
+        "sdk:install-to-path": "bash scripts/install-to-path.sh",
+        "demo:serve": "serve .",
+        "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js",
+        "docs:dev": "vuepress dev docs",
+        "docs:build": "vuepress build docs"
+    },
+    "devDependencies": {
+        "@babel/preset-env": "^7.22.10",
+        "@rollup/plugin-babel": "^6.0.3",
+        "@rollup/plugin-commonjs": "^25.0.4",
+        "@rollup/plugin-eslint": "^9.0.4",
+        "@rollup/plugin-json": "^6.0.0",
+        "@rollup/plugin-node-resolve": "^15.2.1",
+        "@rollup/plugin-replace": "^5.0.2",
+        "@rollup/plugin-terser": "^0.4.3",
+        "@types/ws": "^8.5.5",
+        "@typescript-eslint/eslint-plugin": "^6.4.1",
+        "@typescript-eslint/parser": "^6.4.1",
+        "cross-env": "^7.0.3",
+        "eslint": "^8.48.0",
+        "eslint-config-prettier": "^9.0.0",
+        "eslint-plugin-prettier": "^5.0.0",
+        "rimraf": "^5.0.1",
+        "rollup-plugin-dts": "^6.0.0",
+        "rollup-plugin-typescript2": "^0.35.0",
+        "serve": "^14.2.1",
+        "typescript": "^5.2.2",
+        "vuepress": "^2.0.0-beta.66",
+        "ws": "^8.13.0"
+    },
+    "files": [
+        "dist",
+        "package.json",
+        "CHANGELOG.md",
+        "README.md",
+        "README.en-US.md"
+    ],
+    "keywords": [
+        "context",
+        "invoke",
+        "communication"
+    ],
+    "author": {
+        "name": "memo",
+        "email": "i@memo.cool"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:memo-cn/context-bridge.git"
+    },
+    "bugs": {
+        "email": "i@memo.cool",
+        "url": "https://github.com/memo-cn/context-bridge/issues"
+    },
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org"
+    },
+    "license": "MIT"
 }

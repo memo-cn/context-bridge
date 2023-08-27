@@ -1,0 +1,13 @@
+{
+    "minified": true,
+    "comments": false,
+    "sourceMaps": true,
+    "presets": [
+        [
+            "@babel/preset-env",
+            {
+                "shippedProposals": true
+            }
+        ]
+    ]
+}
