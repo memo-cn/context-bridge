@@ -8,9 +8,9 @@ Context Bridge is a cross-context communication mechanism that supports mutual i
 
 ## 文档（Document）
 
-[在线文档](https://memo-cn.github.io/context-bridge/zh-CN/)
+[简体中文](https://memo-cn.github.io/context-bridge/zh-CN/)
 
-[Online Document](https://memo-cn.github.io/context-bridge/en-US/)
+[English](https://memo-cn.github.io/context-bridge/en-US/)
 
 ## 许可（License）
 
