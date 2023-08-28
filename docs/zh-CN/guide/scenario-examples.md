@@ -3,16 +3,6 @@
 如果能在不同 JavaScript 执行环境内相互获取到对方上下文对象的引用，或者在一个环境内能访问到与另一个环境通信的接口，即
 onmessage 方法和支持[结构化克隆算法](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)的 postMessage 方法，那么就可以通过上下文桥实现不同执行环境中函数的相互调用。
 
-## 回环测试
-
-可以直接将 window 作为信道, 创建上下文桥, 进行回环测试。
-
-```typescript
-var bridge = createContextBridge({
-    createChannel: () => window,
-});
-```
-
 ## 后台线程（Worker）
 
 在[快速开始](./quick-start.md)章节，介绍了主线程和 Worker 线程之间可以通过上下文桥进行相互调用。

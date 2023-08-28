@@ -44,7 +44,7 @@ export default defineUserConfig({
                 ],
                 sidebar: {
                     '/zh-CN/guide/': [
-                        { text: '指南', children: ['quick-start.md', 'scenario-examples.md', 'advanced-skills.md'] },
+                        { text: '指南', children: ['quick-start.md', 'scenario-examples.md', 'practical-skills.md'] },
                     ],
                     '/zh-CN/api/': [
                         {

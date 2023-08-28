@@ -18,7 +18,7 @@
         "demo:serve": "serve .",
         "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js",
         "docs:dev": "vuepress dev docs",
-        "docs:build": "vuepress build docs"
+        "docs:build": "prettier --write . && vuepress build docs"
     },
     "devDependencies": {
         "@babel/preset-env": "^7.22.10",
