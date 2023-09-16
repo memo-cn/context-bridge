@@ -73,7 +73,7 @@ export function checkOptions(options: ContextBridgeOptions<any>) {
     }
 
     // 校验日志级别
-    if (options.logLevel) {
+    if (typeof options.logLevel !== 'undefined') {
         const arr = Object.keys(LogLevel).filter((x) => Number.isNaN(Number(x)));
         if (!arr.includes(options.logLevel)) {
             throw new TypeError(

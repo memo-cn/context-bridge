@@ -573,6 +573,16 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             Message.markAsConsumed(data);
         } else {
             // Log.v('忽略未知类型的消息:', ev);
+
+            // 自定义信道时，如果传了 data, 而不是 {data} 报错提醒 。
+            if (Message.isMessage(ev, trustedOptions.biz)) {
+                Log.e(
+                    zhOrEn(
+                        'channel.onmessage 的回调函数参数必须是一个对象，包含一个 data 属性，而不是一个单独的 data 值; 请将参数修改为 { data } 的形式',
+                        'The callback function parameter of channel.onmessage must be an object containing a data property, not a single data value; please modify the parameter to the form of { data }',
+                    ),
+                );
+            }
             return;
         }
 

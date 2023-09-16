@@ -19,7 +19,7 @@ function startServer() {
         const serverBridge = createContextBridge({
             logLevel: 'verbose',
             tag: 'server',
-            reloadChannelOnConnectionTimeout: false,
+            reloadChannelOnConnectionFailure: false,
             reloadChannelOnInvokeTimeout: false,
             createChannel: () => createChannelFromWebSocket(ws),
         });
@@ -66,7 +66,7 @@ function startClient() {
         const clientBridge = createContextBridge({
             logLevel: 'verbose',
             tag: 'client',
-            reloadChannelOnConnectionTimeout: false,
+            reloadChannelOnConnectTimeout: false,
             reloadChannelOnInvokeTimeout: false,
             createChannel: () => createChannelFromWebSocket(webSocketClient),
 

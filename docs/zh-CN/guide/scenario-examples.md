@@ -50,6 +50,48 @@ var iframeBridge = createContextBridge({
 });
 ```
 
+## 内容脚本与后台脚本
+
+在内容脚本里，使用 [chrome.runtime.connect](https://developer.chrome.com/docs/extensions/reference/runtime/#method-connect) 方法来连接后台脚本，然后将返回的 port 作为信道，创建上下文桥。
+
+```javascript
+var contentBridge = createContextBridge({
+    createChannel() {
+        const port = chrome.runtime.connect();
+        const channel = {
+            postMessage(data) {
+                port.postMessage(data);
+            },
+        };
+        port.onMessage.addListener(function (data, port) {
+            channel?.onmessage?.({ data });
+        });
+        return channel;
+    },
+});
+```
+
+在后台脚本里，使用 [chrome.runtime.onConnect](https://developer.chrome.com/docs/extensions/reference/runtime/#event-onConnect) 事件监听器来接收内容脚本的连接请求，然后同样使用 port 对象作为信道，创建上下文桥。
+
+```javascript
+chrome.runtime.onConnect.addListener(function (port) {
+    const channel = {
+        postMessage(data) {
+            port.postMessage(data);
+        },
+    };
+    port.onMessage.addListener(function (data, port) {
+        channel?.onmessage?.({ data });
+    });
+
+    const backgroundBridge = createContextBridge({
+        createChannel: () => channel
+    });
+});
+```
+
+请注意，port.onMessage 的参数是一个消息值，而不是一个事件对象。如果你比较细心，可能会发现需要将其作为 data 属性的值，再传递给信道的 onmessage 回调函数。不过，如果你不小心直接传递了消息值，上下文桥会提示报错信息。
+
 ## 广播频道（BroadcastChannel）
 
 如果两个执行环境是同源的，那么最简单的方式就是将[广播频道](https://developer.mozilla.org/zh-CN/docs/Web/API/BroadcastChannel)作为信道，创建上下文桥。
