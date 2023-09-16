@@ -32,7 +32,7 @@ export function deepClone<T>(obj: T): T {
             //     }
             //     set.add(val);
             // }
-            newObj[key] = deepClone(val);
+            newObj[key] = copy(val);
         }
         return newObj;
     }
