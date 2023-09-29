@@ -12,6 +12,17 @@ export default defineClientConfig({
                 }
             }
         });
+        setTimeout(() => {
+            document.head.insertAdjacentHTML(
+                'beforeend',
+                `<style>
+body {
+  --c-text-accent: #0ae;
+  --c-brand: #0ae;
+}
+</style>`,
+            );
+        });
     },
     setup() {},
     rootComponents: [],
