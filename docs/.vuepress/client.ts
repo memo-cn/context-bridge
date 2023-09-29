@@ -20,6 +20,7 @@ export default defineClientConfig({
 body {
   --c-text-accent: #0ae;
   --c-brand: #0ae;
+  --code-bg-color: #000;
 }
 </style>`,
                 );
