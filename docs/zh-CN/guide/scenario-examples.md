@@ -134,7 +134,6 @@ var parentBridge = createContextBridge({
 
 ```js
 var childBridge = createContextBridge({
-    logLevel: 'verbose',
     createChannel() {
         const channel = {
             postMessage(message) {
