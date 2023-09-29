@@ -9,6 +9,16 @@ onmessage 方法和支持[结构化克隆算法](https://developer.mozilla.org/z
 
 接下来，我将再举一些常见的例子，展示如何在更多的场景中获取或创建信道，以便创建上下文桥。
 
+## 广播频道（BroadcastChannel）
+
+如果两个执行环境是同源的，那么最简单的方式就是将[广播频道](https://developer.mozilla.org/zh-CN/docs/Web/API/BroadcastChannel)作为信道，创建上下文桥。
+
+```typescript
+var bridge = createContextBridge({
+    createChannel: () => new BroadcastChannel('exampleName')
+});
+```
+
 ## 内嵌窗口（Iframe）
 
 在父窗口内通过 [HTMLIFrameElement.contentWindow](https://developer.mozilla.org/zh-CN/docs/Web/API/HTMLIFrameElement/contentWindow) 属性获取到内嵌窗口的引用，创建上下文桥。
@@ -90,15 +100,52 @@ chrome.runtime.onConnect.addListener(function (port) {
 });
 ```
 
-请注意，port.onMessage 的参数是一个消息值，而不是一个事件对象。如果你比较细心，可能会发现需要将其作为 data 属性的值，再传递给信道的 onmessage 回调函数。不过，如果你不小心直接传递了消息值，上下文桥会提示报错信息。
+请注意，port.onMessage 的参数是一个消息值，而不是一个事件对象。如果你比较细心，可能会发现需要将其作为 data 属性的值，再传递给信道的 onmessage 回调函数。不过，如果你不小心直接传递了消息值，上下文桥也会提示报错信息。
 
-## 广播频道（BroadcastChannel）
+## 进程间通信（IPC）
 
-如果两个执行环境是同源的，那么最简单的方式就是将[广播频道](https://developer.mozilla.org/zh-CN/docs/Web/API/BroadcastChannel)作为信道，创建上下文桥。
+在父进程脚本中，通过 spawn 创建子进程，并将 stdio 数组的第四个参数指定为 'ipc'。
 
-```typescript
-var bridge = createContextBridge({
-    createChannel: () => new BroadcastChannel('exampleName')
+```js
+var childProcess = spawn('node', ['child.js'], {
+    stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+});
+```
+
+然后，将子进程的引用作为信道，创建上下文桥。
+
+```js
+var parentBridge = createContextBridge({
+    createChannel() {
+        const channel = {
+            postMessage(data) {
+                childProcess.send(data);
+            },
+        };
+        childProcess.on('message', function (data) {
+            channel?.onmessage?.({ data });
+        });
+        return channel;
+    },
+});
+```
+
+在子进程脚本中，使用 process 对象作为信道，创建上下文桥。
+
+```js
+var childBridge = createContextBridge({
+    logLevel: 'verbose',
+    createChannel() {
+        const channel = {
+            postMessage(message) {
+                process.send(message);
+            },
+        };
+        process.on('message', function (data) {
+            channel?.onmessage?.({ data });
+        });
+        return channel;
+    },
 });
 ```
 

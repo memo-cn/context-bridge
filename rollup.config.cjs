@@ -66,7 +66,7 @@ const rollupOptions = [
             isProd && {
                 name: pkg.name,
                 format: 'umd',
-                file: pkg.main.replace(/\.common\.js$/, '.umd.js'),
+                file: pkg.main.replace(/\.common\.c?js$/, '.umd.js'),
                 sourcemap,
                 plugins: [plugins.terser],
             },

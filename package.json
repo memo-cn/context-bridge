@@ -17,6 +17,7 @@
         "sdk:install-to-path": "bash scripts/install-to-path.sh",
         "demo:serve": "serve .",
         "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js",
+        "demo:ipc": "node --enable-source-maps --inspect --watch ./demo/ipc/parent.js",
         "docs:dev": "vuepress dev docs",
         "docs:build": "prettier --write . && vuepress build docs"
     },
