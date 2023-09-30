@@ -91,9 +91,10 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeC
     /**
      * **信道关闭时的回调函数**
      * @param channel 旧的信道实例
+     * @param reason 表示关闭的原因。
      * @description 此函数会在信道关闭或重启时调用。你可以用它来释放或清理资源。
      */
-    onChannelClose?: (channel: C) => void;
+    onChannelClose?: (channel: C, reason: string) => void;
 
     /**
      * **信道状态发生改变的回调函数**

@@ -301,13 +301,13 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     const nameMatcherList: NameMatcher[] = [];
 
     // 内部的析构任务队列。操作信道时执行。
-    const innerDisposeTasks: (() => void)[] = [];
+    const innerDisposeTasks: ((reason: string) => void)[] = [];
 
     // 析构当前的资源
-    function dispose() {
+    function dispose(reason: string) {
         for (let innerDisposeTask of innerDisposeTasks) {
             try {
-                innerDisposeTask();
+                innerDisposeTask(reason);
             } catch (e) {
                 Log.e(e);
             }
@@ -330,7 +330,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         setChannelState(op === 'close' ? 'closed' : 'connecting', reason);
 
-        dispose();
+        dispose(reason);
 
         // 如果仍然有任务, 全部拒绝。
         for (const [id, invokeInfo] of id2invokeInfo) {
@@ -416,9 +416,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             channel = newChannel;
 
             // 内部析构时需要回调外部的析构函数
-            innerDisposeTasks.push(() => {
+            innerDisposeTasks.push((reason) => {
                 if (typeof options.onChannelClose === 'function') {
-                    options.onChannelClose(newChannel);
+                    options.onChannelClose(newChannel, reason);
                 }
             });
         } catch (e) {
