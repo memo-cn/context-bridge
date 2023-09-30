@@ -15,11 +15,11 @@
         "sdk:lint-fix": "eslint --fix . && prettier --write .",
         "sdk:publish-to-npm": "npm run 'sdk:build' && if [[ -d ./dist ]]; then npm publish; else echo '请先编译出产物，再发包。'; fi",
         "sdk:install-to-path": "bash scripts/install-to-path.sh",
+        "docs:dev": "vuepress dev docs",
+        "docs:build": "prettier --write . && vuepress build docs",
         "demo:serve": "serve .",
         "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js",
-        "demo:ipc": "node --enable-source-maps --inspect --watch ./demo/ipc/parent.js",
-        "docs:dev": "vuepress dev docs",
-        "docs:build": "prettier --write . && vuepress build docs"
+        "demo:ipc": "node --enable-source-maps --inspect --watch ./demo/ipc/parent.js"
     },
     "devDependencies": {
         "@babel/preset-env": "^7.22.10",

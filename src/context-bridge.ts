@@ -35,9 +35,6 @@ interface MessageEvent {
     data: any;
 }
 
-// 记录 正在被使用的信道实例 及其 对应的操作轮次。一个信道不能同时被多个上下文桥使用。
-const channel2OperationRound = new WeakMap<ContextBridgeChannel, number>();
-
 /**
  * 创建 上下文桥
  */
@@ -416,18 +413,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             const newChannel = await options.createChannel();
             checkChannel(newChannel);
 
-            if (channel2OperationRound.has(newChannel)) {
-                throw new Error(
-                    `channel(${str(newChannel)}) 正在被其他上下文桥#${channel2OperationRound.get(newChannel)}使用。`,
-                );
-            }
-            channel2OperationRound.set(newChannel, operationRound);
-
             channel = newChannel;
 
             // 内部析构时需要回调外部的析构函数
             innerDisposeTasks.push(() => {
-                channel2OperationRound.delete(channel);
                 if (typeof options.onChannelClose === 'function') {
                     options.onChannelClose(newChannel);
                 }
@@ -566,7 +555,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         // 一条消息, 只能被处理一次
         if (Message.isMessage(data, trustedOptions.biz)) {
             if (Message.isConsumed(data)) {
-                Log.w('多个上下文实例间接共用同一个信道, 请为不同实例指定不同的 channelId; 忽略已被消费的消息:', ev);
+                Log.e('多个上下文实例共用同一个信道, 请为不同实例指定不同的 biz; 忽略已被消费的消息:', ev);
                 return;
             }
             // 标记消息被消费
@@ -721,13 +710,15 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     logValue,
                 );
             } else {
-                Log.w(
-                    `多个上下文实例间接共用同一个信道, 请为不同实例指定不同的 channelId; Return id=${data.id} 没有对应的 Call.`,
+                Log.e(
+                    `多个上下文实例共用同一个信道, 请为不同实例指定不同的 biz; Return id=${data.id} 没有对应的 Call.`,
                     ev,
                 );
             }
         } else if (Message.isConnectionNotification(data, trustedOptions.biz)) {
+            // 如果收到的消息的 round 小于或者等于当前的 remoteRound, 说明这条消息已经过时或者重复了, 不应该再进行处理。
             if (data.round > remoteRound) {
+                // 重新建连需要时间, 这里再作一些判断, 避免收到重复消息导致陷入无限重新建连。
                 if (passiveRemoteRound !== data.round) {
                     passiveRemoteRound = data.round;
                     instance.reloadChannel('被动重新建连');
