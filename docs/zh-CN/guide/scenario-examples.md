@@ -3,7 +3,7 @@
 如果能在不同 JavaScript 执行环境内相互获取到对方上下文对象的引用，或者在一个环境内能访问到与另一个环境通信的接口，即
 onmessage 方法和支持[结构化克隆算法](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)的 postMessage 方法，那么就可以通过上下文桥实现不同执行环境中函数的相互调用。
 
-## 后台线程（Worker）
+## 工作线程（Worker）
 
 在[快速开始](./quick-start.md)章节，介绍了主线程和 Worker 线程之间可以通过上下文桥进行相互调用。
 
@@ -60,7 +60,7 @@ var iframeBridge = createContextBridge({
 });
 ```
 
-## 内容脚本与后台脚本
+## 后台脚本（Background scripts）
 
 在内容脚本里，使用 [chrome.runtime.connect](https://developer.chrome.com/docs/extensions/reference/runtime/#method-connect) 方法来连接后台脚本，然后将返回的 port 作为信道，创建上下文桥。
 
@@ -101,6 +101,21 @@ chrome.runtime.onConnect.addListener(function (port) {
 ```
 
 请注意，port.onMessage 的参数是一个消息值，而不是一个事件对象。如果你比较细心，可能会发现需要将其作为 data 属性的值，再传递给信道的 onmessage 回调函数。不过，如果你不小心直接传递了消息值，上下文桥也会提示报错信息。
+
+上下文桥并未内置任何保活机制。原因在于，在应用层进行保活机制的实现，将导致重复封装并增加负载。更重要的是，这样做也无法确保每次调用都能成功。如果你的调用操作是幂等的，可以考虑在调用失败后，使用 [reloadChannel](../api/instance.md#reloadchannel) 方法来重启信道，并自动重试调用。
+
+```ts
+// 后台脚本可能会被休眠。当内容脚本中的 invoke 调用失败时，尝试重启信道，并重新进行 invoke 调用。
+const real$invoke = contentBridge.invoke;
+contentBridge.invoke = async function () {
+    try {
+        return await Reflect.apply(real$invoke, this, arguments);
+    } catch (e) {
+        contentBridge.reloadChannel();
+        return await Reflect.apply(real$invoke, this, arguments);
+    }
+};
+```
 
 ## 进程间通信（IPC）
 
