@@ -12,20 +12,6 @@ export default defineClientConfig({
                 }
             }
         });
-        setTimeout(() => {
-            if (typeof document !== 'undefined') {
-                document.head.insertAdjacentHTML(
-                    'beforeend',
-                    `<style>
-body {
-  --c-text-accent: #0ae;
-  --c-brand: #0ae;
-  --code-bg-color: #000;
-}
-</style>`,
-                );
-            }
-        });
     },
     setup() {},
     rootComponents: [],

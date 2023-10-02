@@ -102,10 +102,12 @@ chrome.runtime.onConnect.addListener(function (port) {
 
 请注意，port.onMessage 的参数是一个消息值，而不是一个事件对象。如果你比较细心，可能会发现需要将其作为 data 属性的值，再传递给信道的 onmessage 回调函数。不过，如果你不小心直接传递了消息值，上下文桥也会提示报错信息。
 
-上下文桥并未内置任何保活机制。原因在于，在应用层进行保活机制的实现，将导致重复封装并增加负载。更重要的是，这样做也无法确保每次调用都能成功。如果你的调用操作是幂等的，可以考虑在调用失败后，使用 [reloadChannel](../api/instance.md#reloadchannel) 方法来重启信道，并自动重试调用。
+我认为在应用层实现的保活机制只是重复封装，在增加负载的同时也无法确保每次调用都能成功。因此，上下文桥并未内置任何保活机制。
+
+如果底层信道的可用性确实不高，并且你的调用操作是幂等的，那么你可以考虑将 [reloadChannelOnInvokeTimeout](../api/options.md#reloadchanneloninvoketimeout) 选项设为 false，并在调用失败后，使用 [reloadChannel](../api/instance.md#reloadchannel) 方法来重启信道，并自动重试调用。
 
 ```ts
-// 后台脚本可能会被休眠。当内容脚本中的 invoke 调用失败时，尝试重启信道，并重新进行 invoke 调用。
+// 后台脚本可能会进入休眠状态。当内容脚本的调用失败时，尝试重新启动信道并再次进行调用。
 const real$invoke = contentBridge.invoke;
 contentBridge.invoke = async function () {
     try {
@@ -116,6 +118,10 @@ contentBridge.invoke = async function () {
     }
 };
 ```
+
+::: tip 提示
+你可以在创建上下文桥或发出重启信道指令后立即发起调用，无需等待底层信道连接准备就绪。上下文桥会在连接成功建立后才真正发送调用消息。
+:::
 
 ## 进程间通信（IPC）
 
