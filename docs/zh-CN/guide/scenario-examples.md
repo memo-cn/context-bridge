@@ -125,7 +125,7 @@ contentBridge.invoke = async function () {
 
 ## 进程间通信（IPC）
 
-在父进程脚本中，通过 spawn 创建子进程，并将 stdio 数组的第四个参数指定为 'ipc'。
+在父进程脚本中，通过 [spawn](https://nodejs.org/api/child_process.html#child_processspawncommand-args-options) 创建子进程，并将 stdio 数组的第四个参数指定为 'ipc'。
 
 ```js
 var childProcess = spawn('node', ['child.js'], {
