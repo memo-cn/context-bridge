@@ -3,13 +3,18 @@ import { isObject } from './utils';
 import { version } from '../package.json';
 import { InvokeEntry } from './types';
 
-// {
-//     const index = version.lastIndexOf('.');
-//     version.slice(0, index);
-// }
-
 type Biz = undefined | string;
 const nsKey = '__context-bridge';
+
+function getMajorVersion(version: string) {
+    const ind = version.indexOf('.');
+    if (ind === -1) {
+        return version;
+    }
+    return version.slice(0, ind);
+}
+
+const majorVersion = getMajorVersion(version);
 
 // 上下文桥消息
 export type ContextBridgeMessage = {
@@ -55,9 +60,12 @@ export function isMessage(arg: any, biz: Biz): arg is ContextBridgeMessage & Rec
     if (!Object.hasOwn(arg, nsKey)) {
         return false;
     }
-    // if (arg[nsKey] !== version) {
+    // 主版本不相同
+    // if (majorVersion !== getMajorVersion(arg[nsKey]?.version)) {
+    //     console.log(majorVersion, arg[nsKey]?.version);
     //     return false;
     // }
+    // biz 不相同
     if (arg[nsKey].biz !== biz) {
         return false;
     }

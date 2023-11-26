@@ -30,14 +30,6 @@ export interface InvokeEntry<T = any> extends ContextBridgeMessage {
     call: string /** 调用的函数名称 */;
     result: 'success' | 'failure' /** 调用结果 */;
 
-    /**
-     * 调用成功时存在 error、reason 两个字段。
-     * error 和 throw 的区别是:
-     * throw 是业务函数执行抛出的错误, error 是指上下文桥调用外部接口报的错。
-     * 因此调用失败时, error 字段不一定存在, 比如超时不涉及错误堆栈。
-     * 当 reason 为 function execution error 时, throw 和 error 相同。
-     * */
-
     /** 发生错误时, 对错误信息进行记录 */
     error?: JSONError;
     reason?:
