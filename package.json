@@ -8,7 +8,6 @@
     "module": "./dist/context-bridge.es.js",
     "types": "./dist/context-bridge.es.d.ts",
     "scripts": {
-        "postinstall": "node ./scripts/postinstall.js",
         "sdk:dev": "rimraf ./dist/* && cross-env NODE_ENV=development rollup -wc",
         "sdk:build": "rimraf ./dist/* && rollup -c",
         "sdk:clean": "rimraf ./dist/*",
@@ -16,8 +15,8 @@
         "sdk:lint-fix": "eslint --fix . && prettier --write .",
         "sdk:publish-to-npm": "npm run 'sdk:build' && if [[ -d ./dist ]]; then npm publish; else echo '请先编译出产物，再发包。'; fi",
         "sdk:install-to-path": "bash scripts/install-to-path.sh",
-        "docs:dev": "vuepress dev docs",
-        "docs:build": "prettier --write . && vuepress build docs",
+        "docs:dev": "node ./scripts/pre-docs.js && vuepress dev docs",
+        "docs:build": "node ./scripts/pre-docs.js && prettier --write . && vuepress build docs",
         "demo:serve": "serve .",
         "demo:websocket": "node --enable-source-maps --inspect ./demo/web-socket/main.js",
         "demo:ipc": "node --enable-source-maps --inspect --watch ./demo/ipc/parent.js"
