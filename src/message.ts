@@ -1,39 +1,36 @@
 import type { SerializedException } from './utils';
-
 import { isObject } from './utils';
 import { version } from '../package.json';
 import { InvokeEntry } from './types';
 
-// 命名空间信息
-const ns = {
-    key: '__context-bridge',
-    value: {
-        // 上下文桥 SDK 的版本
-        version,
-        // 业务标识
-        biz: void 0 as undefined | string,
-    },
-} as const;
+// {
+//     const index = version.lastIndexOf('.');
+//     version.slice(0, index);
+// }
 
-type Biz = typeof ns.value.biz;
+type Biz = undefined | string;
+const nsKey = '__context-bridge';
+
+// 上下文桥消息
+export type ContextBridgeMessage = {
+    [nsKey]: {
+        version: string;
+        biz: Biz;
+    };
+};
 
 // 给消息加上命名空间参数
-export function addNamespaceParams<T>(msg: T, { biz }: { biz: typeof ns.value.biz }): T & ContextBridgeMessage {
+export function addNamespaceParams<T>(msg: T, { biz }: { biz: Biz }): T & ContextBridgeMessage {
     return Object.assign(
         {
-            [ns.key]: {
-                version: ns.value.version,
+            [nsKey]: {
+                version,
                 biz,
             },
         },
         msg,
     );
 }
-
-// 消息
-export type ContextBridgeMessage = {
-    [K in typeof ns.key]: typeof ns.value;
-};
 
 // 记录被消费的消息
 const consumedMessage = new WeakSet<ContextBridgeMessage>();
@@ -43,17 +40,28 @@ export function isConsumed(msg: ContextBridgeMessage): boolean {
     return consumedMessage.has(msg);
 }
 
-// 是否为消息且信道匹配。
-export function isMessage(arg: any, biz: Biz): arg is ContextBridgeMessage & Record<any, any> {
-    if (!isObject(arg)) return false;
-    if (!(ns.key in arg)) return false; // && ns.value.version === arg[ns.key]?.version;
-    if (arg[ns.key].biz !== biz) return false;
-    return true;
-}
-
 // 标记消息已被消费
 export function markAsConsumed(msg: ContextBridgeMessage) {
     consumedMessage.add(msg);
+}
+
+// 是否为消息且信道匹配。
+export function isMessage(arg: any, biz: Biz): arg is ContextBridgeMessage & Record<any, any> {
+    // 不是对象
+    if (!isObject(arg)) {
+        return false;
+    }
+    // 对象的 key 不包含 nsKey
+    if (!Object.hasOwn(arg, nsKey)) {
+        return false;
+    }
+    // if (arg[nsKey] !== version) {
+    //     return false;
+    // }
+    if (arg[nsKey].biz !== biz) {
+        return false;
+    }
+    return true;
 }
 
 // 调用函数
@@ -81,12 +89,19 @@ export interface ReturnOrThrow extends ContextBridgeMessage {
 }
 
 export function isReturnOrThrow(data: any, biz: Biz): data is ReturnOrThrow {
-    if (!isMessage(data, biz)) return false;
-    return 'id' in data && ('return' in data || 'throw' in data);
+    if (!isMessage(data, biz)) {
+        return false;
+    }
+    if (Object.hasOwn(data, 'id')) {
+        if (Object.hasOwn(data, 'return') || Object.hasOwn(data, 'throw')) {
+            return true;
+        }
+    }
+    return false;
 }
 
 export function isThrow(data: ReturnOrThrow): data is Throw {
-    return 'throw' in data;
+    return Object.hasOwn(data, 'throw');
 }
 
 export function isReturn(data: ReturnOrThrow): data is Return {
@@ -101,24 +116,31 @@ export interface ConnectionNotification extends ContextBridgeMessage {
     round: number;
 }
 
+// 是否为连接通知
 export function isConnectionNotification(data: any, biz: Biz): data is ConnectionNotification {
-    if (!isMessage(data, biz)) return false;
+    if (!isMessage(data, biz)) {
+        return false;
+    }
     if (typeof data.round !== 'number') {
         return false;
     }
     if (data.round < 0) {
         return false;
     }
-    return 'tag' in data;
+    if (!Object.hasOwn(data, 'tag')) {
+        return false;
+    }
+    return true;
 }
 
 export function isCall(data: any, biz: Biz): data is Call {
-    if (!isMessage(data, biz)) return false;
-    if ('id' in data && 'call' in data && 'args' in data) {
-        return true;
-    }
-    if (!(data.args instanceof Array)) {
+    if (!isMessage(data, biz)) {
         return false;
+    }
+    if (Object.hasOwn(data, 'id') && Object.hasOwn(data, 'call') && Object.hasOwn(data, 'args')) {
+        if (Array.isArray(data.args)) {
+            return true;
+        }
     }
     return false;
 }
