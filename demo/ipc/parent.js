@@ -8,7 +8,7 @@ const childProcess = spawn('node', [`${__dirname}/child.js`], {
 });
 
 const parentBridge = createContextBridge({
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel() {
         const channel = {
             postMessage(data) {

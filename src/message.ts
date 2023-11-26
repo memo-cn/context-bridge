@@ -71,21 +71,30 @@ export interface Call extends ContextBridgeMessage {
     args: any[]; // 调用参数
 }
 
+export interface ReturnOrThrow extends ContextBridgeMessage {
+    id: any;
+    // 执行耗时
+    executionDuration: number;
+    // 执行结果
+    result: 'success' | 'failure';
+}
+
 // 返回结果
 export interface Return extends ReturnOrThrow {
-    id: any;
-    return: any; // 执行结果;
+    // 执行成功
+    result: 'success';
+    // 执行结果
+    return: any;
 }
 
 // 返回报错
 export interface Throw extends ReturnOrThrow {
-    throw: SerializedException; // 执行过程抛出的异常
-    reason: InvokeEntry['reason']; // 执行异常的原因
-}
-
-export interface ReturnOrThrow extends ContextBridgeMessage {
-    id: any;
-    executionDuration: number; // 执行耗时
+    // 执行失败
+    result: 'failure';
+    // 执行过程抛出的异常
+    throw: SerializedException;
+    // 执行异常的原因
+    reason: InvokeEntry['reason'];
 }
 
 export function isReturnOrThrow(data: any, biz: Biz): data is ReturnOrThrow {
@@ -93,7 +102,7 @@ export function isReturnOrThrow(data: any, biz: Biz): data is ReturnOrThrow {
         return false;
     }
     if (Object.hasOwn(data, 'id')) {
-        if (Object.hasOwn(data, 'return') || Object.hasOwn(data, 'throw')) {
+        if (data.result === 'success' || data.result === 'failure') {
             return true;
         }
     }
@@ -101,11 +110,11 @@ export function isReturnOrThrow(data: any, biz: Biz): data is ReturnOrThrow {
 }
 
 export function isThrow(data: ReturnOrThrow): data is Throw {
-    return Object.hasOwn(data, 'throw');
+    return data.result === 'failure';
 }
 
 export function isReturn(data: ReturnOrThrow): data is Return {
-    return !isThrow(data);
+    return data.result === 'success';
 }
 
 // 连接通知

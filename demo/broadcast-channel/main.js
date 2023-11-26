@@ -2,10 +2,13 @@ import { createContextBridge } from '../../dist/context-bridge.es.js';
 
 const bridge = createContextBridge({
     tag: 'main page',
-    logLevel: 'verbose',
+    logLevel: 'debug',
     createChannel: () => new BroadcastChannel('bc'),
 });
 
-console.log('1 + 2 =', await bridge.invoke('sum', 1, 2));
-
-console.log('5 + x =', await bridge.invoke('sum', 5, 'x'));
+try {
+    const res = await bridge.invokeWithDetail('sum', 3);
+    console.log('返回', res);
+} catch (e) {
+    console.log('报错', e);
+}

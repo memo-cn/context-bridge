@@ -79,9 +79,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     // 布尔值 (remoteTag > localTag)
     let logOpposite: null | boolean = null;
-    let logTagCSS = getLogTagCSS();
+    let logTagCSS = getLogTagCSS(logOpposite);
 
-    function getLogTagCSS() {
+    function getLogTagCSS(logOpposite: boolean | null) {
         switch (logOpposite) {
             case true:
                 return 'font-weight:bold; color:#00aaee; background-color: #cceeff;';
@@ -94,8 +94,18 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     // 日志记录器
     const Log = {
-        v: function () {
-            if (trustedOptions.logLevel >= LogLevel.verbose) {
+        d: function () {
+            if (trustedOptions.logLevel >= LogLevel.debug) {
+                if (trustedOptions.localTag) {
+                    console.debug(`%c ${trustedOptions.localTag} %c`, logTagCSS, '', ...arguments);
+                } else {
+                    console.debug(...arguments);
+                }
+            }
+        } as typeof console.debug,
+
+        l: function () {
+            if (trustedOptions.logLevel >= LogLevel.log) {
                 if (trustedOptions.localTag) {
                     console.log(`%c ${trustedOptions.localTag} %c`, logTagCSS, '', ...arguments);
                 } else {
@@ -179,7 +189,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         if (id === Number.MAX_SAFE_INTEGER) {
             id = invokeIdCount = 0;
         }
-        Log.v(`开始调用$${id}`, `${name}, 入参`, args);
+        Log.l(`开始调用$${id}`, `${name}, 入参`, args);
         const m: Message.Call = Message.addNamespaceParams(
             {
                 id,
@@ -188,11 +198,6 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             },
             { biz: trustedOptions.biz },
         );
-
-        // 发送任务
-        function send() {
-            channel.postMessage(m);
-        }
 
         return new Promise<DetailedInvokeResult<ReturnType<Awaited<RemoteFunction>>>>((resolve, reject) => {
             const timeout = trustedOptions.invokeTimeout;
@@ -224,7 +229,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             });
 
             try {
-                send();
+                // 发送任务
+                Log.d('发送调用消息', m);
+                channel.postMessage(m);
             } catch (e) {
                 invokeEntry.responseDuration = Date.now() - invokeEntry.startTime;
                 invokeEntry.result = 'failure';
@@ -358,7 +365,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         if (op === 'close') {
             readyTimePromiseReject(`信道#${operationRound}(${reason})已被关闭。`);
-            Log.v(`信道#${operationRound}(${reason})已被关闭。`);
+            Log.l(`信道#${operationRound}(${reason})已被关闭。`);
             return;
         }
 
@@ -367,7 +374,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 (readyTime) => {
                     connectionEntry.duration = readyTime - connectionEntry.startTime;
                     connectionEntry.result = 'success';
-                    Log.v(`建连#${operationRound}(${reason})成功, 耗时`, connectionEntry.duration, '毫秒。');
+                    Log.l(`建连#${operationRound}(${reason})成功, 耗时`, connectionEntry.duration, '毫秒。');
                     setChannelState('open', reason);
                 },
                 (reason) => {
@@ -444,7 +451,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         // ····················「开始」建连 ····················
 
         // 向另一个上下文发送一次 ready
-        Log.v(`建连#${operationRound}(${reason})开始。`);
+        Log.l(`建连#${operationRound}(${reason})开始。`);
         const stopSendReady = setExponentialInterval(sendReady, 100);
 
         innerDisposeTasks.push(() => {
@@ -477,6 +484,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     },
                     { biz: trustedOptions.biz },
                 );
+                Log.d('发送建连消息', m);
                 channel.postMessage(m);
             } catch (e) {
                 stopSendReady();
@@ -495,12 +503,12 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             // 两个上下文的连接实际上已经建立好了
             if (Message.isConnectionNotification(data, trustedOptions.biz)) {
                 // 记录远程tag
-                trustedOptions.remoteTag = String(data.tag || '远程');
+                trustedOptions.remoteTag = String(data.tag || zhOrEn('远程', 'Remote'));
                 // 记录远程轮次
                 remoteRound = data.round;
                 // 计算本地 tag 颜色
                 logOpposite = trustedOptions.remoteTag > trustedOptions.localTag;
-                logTagCSS = getLogTagCSS();
+                logTagCSS = getLogTagCSS(logOpposite);
                 // 在此上下文标记 ready
                 readyTimePromiseResolve(Date.now());
                 // 停止发送 ready
@@ -561,7 +569,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             // 标记消息被消费
             Message.markAsConsumed(data);
         } else {
-            // Log.v('忽略未知类型的消息:', ev);
+            Log.d('收到非消息的事件', ev);
 
             // 自定义信道时，如果传了 data, 而不是 {data} 报错提醒 。
             if (Message.isMessage(ev, trustedOptions.biz)) {
@@ -576,6 +584,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         }
 
         if (Message.isCall(data, trustedOptions.biz)) {
+            Log.d('收到调用消息', data);
             // 调用上下文
             const invokeContext: InvokeContext = {
                 call: String(data.call),
@@ -602,7 +611,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 }
             }
 
-            Log.v(`开始执行$${data.id}`, data.call + ', 入参', data.args);
+            Log.l(`开始执行$${data.id}`, data.call + ', 入参', data.args);
 
             let startTime = Date.now();
             const setResult = (arg: { error: any; reason: InvokeEntry['reason'] } | { return: any }) => {
@@ -611,7 +620,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 let errorOccurred: boolean;
                 let logValue: any;
 
-                const returnOrThrow: Message.ReturnOrThrow = Message.addNamespaceParams(
+                const returnOrThrow: Omit<Message.ReturnOrThrow, 'result'> = Message.addNamespaceParams(
                     {
                         id: data.id,
                         executionDuration,
@@ -622,13 +631,15 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 if ('return' in arg) {
                     errorOccurred = false;
                     (returnOrThrow as Message.Return).return = logValue = arg.return;
+                    (returnOrThrow as Message.Return).result = 'success';
                 } else {
                     errorOccurred = true;
                     (returnOrThrow as Message.Throw).throw = serializeException((logValue = arg.error));
                     (returnOrThrow as Message.Throw).reason = arg.reason;
+                    (returnOrThrow as Message.Throw).result = 'failure';
                 }
 
-                (errorOccurred ? Log.e : Log.v)(
+                (errorOccurred ? Log.e : Log.l)(
                     `结束执行$${data.id}`,
                     data.call + ',',
                     '耗时',
@@ -637,6 +648,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     logValue,
                 );
 
+                Log.d('发送调用回复消息', returnOrThrow);
                 channel.postMessage(returnOrThrow);
             };
 
@@ -660,6 +672,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 }
             }
         } else if (Message.isReturnOrThrow(data, trustedOptions.biz)) {
+            Log.d('收到调用回复消息', data);
+
             const invokeInfo = id2invokeInfo.get(data.id);
             id2invokeInfo.delete(data.id);
 
@@ -702,7 +716,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
                 contextBridgePerformanceEntries.push(callEntry);
 
-                (errorOccurred ? Log.e : Log.v)(
+                (errorOccurred ? Log.e : Log.l)(
                     `结束调用$${data.id}`,
                     invokeInfo.funName + ', 耗时',
                     responseDuration,
@@ -716,6 +730,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 );
             }
         } else if (Message.isConnectionNotification(data, trustedOptions.biz)) {
+            Log.d('收到建连消息', data);
             // 如果收到的消息的 round 小于或者等于当前的 remoteRound, 说明这条消息已经过时或者重复了, 不应该再进行处理。
             if (data.round > remoteRound) {
                 // 重新建连需要时间, 这里再作一些判断, 避免收到重复消息导致陷入无限重新建连。
@@ -724,6 +739,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     instance.reloadChannel('被动重新建连');
                 }
             }
+        } else {
+            Log.d('收到无法处理的消息', data);
         }
     }
 
@@ -769,7 +786,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
                 isOverridden = true;
             } else {
-                Log.v(`重复订阅: ${str(nameOrMatcher)}, 已忽略。`);
+                Log.l(`重复订阅: ${str(nameOrMatcher)}, 已忽略。`);
                 return;
             }
         }
@@ -779,7 +796,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             nameMatcherList.push(nameOrMatcher);
         }
 
-        Log.v(`已${isOverridden ? '覆盖' : ''}订阅: ${str(nameOrMatcher)}。`);
+        Log.l(`已${isOverridden ? '覆盖' : ''}订阅: ${str(nameOrMatcher)}。`);
     };
 
     const removeInvokeListener: ContextBridgeInstance['removeInvokeListener'] = function (name: any) {
@@ -795,9 +812,9 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             if (index >= 0) {
                 nameMatcherList.splice(index, 1);
             }
-            Log.v(`已取消订阅: ${str(nameOrMatcher)}。`);
+            Log.l(`已取消订阅: ${str(nameOrMatcher)}。`);
         } else {
-            Log.v(`未订阅: ${str(nameOrMatcher)}, 无需取消。`);
+            Log.l(`未订阅: ${str(nameOrMatcher)}, 无需取消。`);
         }
     };
 

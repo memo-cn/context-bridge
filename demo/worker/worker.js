@@ -2,7 +2,7 @@ import { createContextBridge } from '../../dist/context-bridge.es.js';
 
 const workerBridge = createContextBridge({
     tag: 'worker',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel: () => self,
 });
 

@@ -2,7 +2,7 @@ import { createContextBridge } from '../../dist/context-bridge.es.js';
 
 const iframeBridge = createContextBridge({
     tag: 'iframe',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel() {
         const channel = {
             postMessage(data) {

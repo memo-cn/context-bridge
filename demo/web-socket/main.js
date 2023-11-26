@@ -17,7 +17,7 @@ function startServer() {
 
     webSocketServer.on('connection', function (ws, incomingMessage) {
         const serverBridge = createContextBridge({
-            logLevel: 'verbose',
+            logLevel: 'log',
             tag: 'server',
             reloadChannelOnConnectionFailure: false,
             reloadChannelOnInvokeTimeout: false,
@@ -64,7 +64,7 @@ function startClient() {
 
     webSocketClient.onopen = async function () {
         const clientBridge = createContextBridge({
-            logLevel: 'verbose',
+            logLevel: 'log',
             tag: 'client',
             reloadChannelOnConnectTimeout: false,
             reloadChannelOnInvokeTimeout: false,

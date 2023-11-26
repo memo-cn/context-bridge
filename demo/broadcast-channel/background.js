@@ -2,7 +2,7 @@ import { createContextBridge } from '../../dist/context-bridge.es.js';
 
 const bridge = createContextBridge({
     tag: 'background page',
-    logLevel: 'verbose',
+    logLevel: 'debug',
     createChannel: () => new BroadcastChannel('bc'),
 });
 

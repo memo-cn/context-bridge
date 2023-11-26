@@ -14,13 +14,13 @@ var channel2 = {
 
 var bridge1 = (window.a = createContextBridge({
     tag: 'bridge1',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel: () => channel1,
 }));
 
 var bridge2 = (window.b = createContextBridge({
     tag: 'bridge2',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel: () => channel2,
 }));
 

@@ -1,7 +1,7 @@
 const { createContextBridge } = require('../../dist/context-bridge.common.js');
 
 const childBridge = createContextBridge({
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel() {
         const channel = {
             postMessage(data) {
