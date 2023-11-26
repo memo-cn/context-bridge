@@ -4,7 +4,6 @@ import {
     ContextBridgeInstance,
     ContextBridgeOptions,
     ContextBridgePerformanceEntry,
-    DetailedInvokeResult,
     Func,
     InvokeContext,
     InvokeEntry,
@@ -21,9 +20,11 @@ import {
     deserializeException,
     error2JSON,
     isObject,
+    JSON2error,
     serializeException,
     setExponentialInterval,
     str,
+    withResolvers,
     zhOrEn,
 } from './utils';
 
@@ -139,7 +140,15 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「开始」处理函数调用 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
     async function invoke<RemoteFunction extends Func = Func>(nameOrOptions: string | InvokeOptions, ...args: any[]) {
-        return (await invokeWithDetail(nameOrOptions, ...args)).result;
+        const invokeEntry = await invokeWithDetail(nameOrOptions, ...args);
+        if (invokeEntry.result === 'success') {
+            return invokeEntry.return;
+        } else {
+            if (invokeEntry.reason === 'function execution error') {
+                throw invokeEntry.throw;
+            }
+            throw invokeEntry.reason;
+        }
     }
 
     async function invokeWithDetail<RemoteFunction extends Func = Func>(
@@ -158,7 +167,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     async function invokeWithDetail$0<RemoteFunction extends Func = Func>(
         name: string,
         ...args: any[]
-    ): Promise<DetailedInvokeResult<ReturnType<Awaited<RemoteFunction>>>> {
+    ): Promise<InvokeEntry<ReturnType<Awaited<RemoteFunction>>>> {
         // 调用指标
         const invokeEntry: InvokeEntry = Message.addNamespaceParams(
             {
@@ -173,75 +182,104 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             { biz: trustedOptions.biz },
         );
 
-        try {
-            await readyTimePromise;
-        } catch (e) {
-            invokeEntry.responseDuration = Date.now() - invokeEntry.startTime;
-            invokeEntry.result = 'failure';
-            invokeEntry.reason = 'invoke cancelled';
-            invokeEntry.error = error2JSON(e);
-
-            contextBridgePerformanceEntries.push(invokeEntry);
-            throw e;
-        }
-
         let id = ++invokeIdCount;
         if (id === Number.MAX_SAFE_INTEGER) {
             id = invokeIdCount = 0;
         }
-        Log.l(`开始调用$${id}`, `${name}, 入参`, args);
-        const m: Message.Call = Message.addNamespaceParams(
-            {
-                id,
-                call: name,
-                args,
-            },
-            { biz: trustedOptions.biz },
-        );
 
-        return new Promise<DetailedInvokeResult<ReturnType<Awaited<RemoteFunction>>>>((resolve, reject) => {
-            const timeout = trustedOptions.invokeTimeout;
-            if (timeout) {
-                setTimeout(() => {
-                    if (id2invokeInfo.has(id)) {
-                        // 超时未响应
+        // 调用信息
+        const invokeP = withResolvers<InvokeEntry>();
 
-                        if (trustedOptions.reloadChannelOnInvokeTimeout) {
-                            instance.reloadChannel(
-                                `${
-                                    trustedOptions.remoteTag ? trustedOptions.remoteTag : 'remoteContext'
-                                }::${name} 超过 ${timeout} 毫秒未响应`,
-                            );
+        const invokeInfo: InvokeInfo = {
+            entry: invokeEntry,
+            settle(arg) {
+                // 只能被 finalize 一次
+                invokeInfo.settle = (() => {}) as any;
+
+                id2invokeInfo.delete(id);
+
+                // 取消调用超时回调函数
+                if (invokeInfo.timeoutTid) {
+                    clearTimeout(invokeInfo.timeoutTid);
+                }
+
+                if (typeof arg.responseDuration === 'number') {
+                    invokeEntry.responseDuration = arg.responseDuration;
+                } else {
+                    invokeEntry.responseDuration = Date.now() - invokeEntry.startTime;
+                }
+                if (typeof arg.executionDuration === 'number') {
+                    invokeEntry.executionDuration = arg.executionDuration;
+                }
+                invokeEntry.result = arg.result;
+                if (arg.result === 'success') {
+                    invokeEntry.return = arg.return;
+                } else {
+                    invokeEntry.error = arg.error;
+                    invokeEntry.reason = arg.reason;
+                    if (Object.hasOwn(arg, 'throw')) {
+                        if (invokeEntry.reason !== 'function not subscribed') {
+                            invokeEntry.throw = arg.throw;
                         }
-
-                        invokeEntry.responseDuration = Date.now() - invokeEntry.startTime;
-                        invokeEntry.result = 'failure';
-                        invokeEntry.reason = 'timeout';
-                        contextBridgePerformanceEntries.push(invokeEntry);
                     }
-                }, timeout);
-            }
+                }
 
-            id2invokeInfo.set(id, {
-                callbackPromise: { resolve, reject },
-                funName: name,
-                createdTime: Date.now(),
-            });
-
-            try {
-                // 发送任务
-                Log.d('发送调用消息', m);
-                channel.postMessage(m);
-            } catch (e) {
-                invokeEntry.responseDuration = Date.now() - invokeEntry.startTime;
-                invokeEntry.result = 'failure';
-                invokeEntry.reason = 'message sending failed';
-                invokeEntry.error = error2JSON(e);
                 contextBridgePerformanceEntries.push(invokeEntry);
+                invokeP.resolve(invokeEntry);
+            },
+            timeoutTid: undefined,
+        };
 
-                reject(e);
-            }
-        });
+        id2invokeInfo.set(id, invokeInfo);
+
+        // 调用超时
+        const timeout = trustedOptions.invokeTimeout;
+        if (timeout) {
+            invokeInfo.timeoutTid = setTimeout(() => {
+                if (id2invokeInfo.has(id)) {
+                    invokeInfo.settle({
+                        result: 'failure',
+                        reason: 'timeout',
+                    });
+                    if (trustedOptions.reloadChannelOnInvokeTimeout) {
+                        instance.reloadChannel(`${trustedOptions.remoteTag}::${name} 超过 ${timeout} 毫秒未响应`);
+                    }
+                }
+            }, timeout);
+        }
+
+        try {
+            await readyTimePromise;
+        } catch (e) {
+            invokeInfo.settle({
+                result: 'failure',
+                reason: 'invoke cancelled',
+                error: error2JSON(e),
+            });
+        }
+
+        Log.l(`开始调用$${id}`, `${name}, 入参`, args);
+
+        try {
+            const m: Message.Call = Message.addNamespaceParams(
+                {
+                    id,
+                    call: name,
+                    args,
+                },
+                { biz: trustedOptions.biz },
+            );
+            Log.d('发送调用消息', m);
+            channel.postMessage(m);
+        } catch (e) {
+            invokeInfo.settle({
+                result: 'failure',
+                reason: 'message sending failed',
+                error: error2JSON(e),
+            });
+        }
+
+        return invokeP.promise;
     }
 
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「结束」处理函数调用 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
@@ -282,21 +320,40 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     let readyTimePromiseResolve: (time: number) => void;
     let readyTimePromiseReject: (reason: any) => void;
 
+    type InvokeInfo = {
+        // 调用指标
+        entry: InvokeEntry;
+
+        // 调用超时回调函数的 tid; 当这个值存在时, 表示 timeout 存在, 且仍然在等待。
+        timeoutTid: undefined | ReturnType<typeof setTimeout>;
+
+        // 敲定调用指标
+        settle: (
+            arg:
+                | {
+                      result: 'success';
+                      return: any;
+
+                      executionDuration: number;
+                      // 如果不指定, 内部自动计算
+                      responseDuration?: number;
+                  }
+                | {
+                      result: 'failure';
+                      reason: Exclude<InvokeEntry['reason'], undefined>;
+
+                      executionDuration?: number;
+                      responseDuration?: number;
+
+                      error?: Exclude<InvokeEntry['error'], undefined>;
+
+                      throw?: InvokeEntry['throw'];
+                  },
+        ) => void;
+    };
+
     // 等待回执的 id 对应的信息
-    const id2invokeInfo = new Map<
-        number,
-        {
-            // promise 的 resolve、reject
-            callbackPromise: {
-                resolve: (result: DetailedInvokeResult) => void;
-                reject: (reason: any) => void;
-            };
-            // 调用的函数名
-            funName: string;
-            // invoke 创建的毫秒级时间戳
-            createdTime: number;
-        }
-    >();
+    const id2invokeInfo = new Map<number, InvokeInfo>();
 
     // 当前 id
     let invokeIdCount = 0;
@@ -341,8 +398,11 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         // 如果仍然有任务, 全部拒绝。
         for (const [id, invokeInfo] of id2invokeInfo) {
-            id2invokeInfo.delete(id);
-            invokeInfo.callbackPromise.reject(new Error(reason));
+            invokeInfo.settle({
+                result: 'failure',
+                reason: 'invoke cancelled',
+                error: error2JSON(reason),
+            });
         }
 
         // --------------------「开始」创建并校验信道 --------------------
@@ -359,7 +419,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         channel = {
             onmessage: null,
             postMessage(message: any): void {
-                throw new Error(`信道#${operationRound}(${reason})未就绪。`);
+                throw `信道#${operationRound}(${reason})未就绪。`;
             },
         };
 
@@ -502,7 +562,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             const data = ev.data;
             // 两个上下文的连接实际上已经建立好了
             if (Message.isConnectionNotification(data, trustedOptions.biz)) {
-                // 记录远程tag
+                // 记录远程 tag
                 trustedOptions.remoteTag = String(data.tag || zhOrEn('远程', 'Remote'));
                 // 记录远程轮次
                 remoteRound = data.round;
@@ -614,37 +674,36 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             Log.l(`开始执行$${data.id}`, data.call + ', 入参', data.args);
 
             let startTime = Date.now();
-            const setResult = (arg: { error: any; reason: InvokeEntry['reason'] } | { return: any }) => {
+            const setResult = (
+                arg:
+                    | { result: 'failure'; throw: any; reason: InvokeEntry['reason'] }
+                    | { result: 'success'; return: any },
+            ) => {
                 const executionDuration = Date.now() - startTime;
-                // 执行是否发生错误
-                let errorOccurred: boolean;
                 let logValue: any;
 
-                const returnOrThrow: Omit<Message.ReturnOrThrow, 'result'> = Message.addNamespaceParams(
+                const returnOrThrow: Message.ReturnOrThrow = Message.addNamespaceParams(
                     {
                         id: data.id,
                         executionDuration,
+                        result: arg.result,
                     },
                     { biz: trustedOptions.biz },
                 );
 
-                if ('return' in arg) {
-                    errorOccurred = false;
+                if (arg.result === 'success') {
                     (returnOrThrow as Message.Return).return = logValue = arg.return;
-                    (returnOrThrow as Message.Return).result = 'success';
                 } else {
-                    errorOccurred = true;
-                    (returnOrThrow as Message.Throw).throw = serializeException((logValue = arg.error));
+                    (returnOrThrow as Message.Throw).throw = serializeException((logValue = arg.throw));
                     (returnOrThrow as Message.Throw).reason = arg.reason;
-                    (returnOrThrow as Message.Throw).result = 'failure';
                 }
 
-                (errorOccurred ? Log.e : Log.l)(
+                (arg.result === 'failure' ? Log.e : Log.l)(
                     `结束执行$${data.id}`,
                     data.call + ',',
                     '耗时',
                     executionDuration,
-                    `毫秒, ${errorOccurred ? '报错' : '返回'}`,
+                    `毫秒, ${arg.result === 'failure' ? '报错' : '返回'}`,
                     logValue,
                 );
 
@@ -654,20 +713,23 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
             if (!fun) {
                 setResult({
-                    error: new Error(
+                    result: 'failure',
+                    // 未订阅的这个错误只用于控制台日志, 不会传递到 entry
+                    throw:
                         `[${trustedOptions.localTag}] ` + zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call),
-                    ),
                     reason: 'function not subscribed',
                 });
             } else {
                 try {
                     setResult({
+                        result: 'success',
                         return: await Reflect.apply(fun, invokeContext, data.args),
                     });
                 } catch (e: any) {
                     setResult({
+                        result: 'failure',
                         reason: 'function execution error',
-                        error: e,
+                        throw: e,
                     });
                 }
             }
@@ -678,47 +740,35 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             id2invokeInfo.delete(data.id);
 
             if (invokeInfo) {
-                const responseDuration = Date.now() - invokeInfo.createdTime;
+                const responseDuration = Date.now() - invokeInfo.entry.startTime;
 
                 // 执行是否发生错误
                 let errorOccurred = false;
                 let logValue: any;
 
-                const callEntry: InvokeEntry = Message.addNamespaceParams(
-                    {
-                        tag: trustedOptions.localTag,
-                        entryType: 'invoke',
-                        startTime: invokeInfo.createdTime,
-                        executionDuration: data.executionDuration,
-                        responseDuration,
-                        call: invokeInfo.funName,
-                        result: 'success',
-                    },
-                    { biz: trustedOptions.biz },
-                );
-
                 if (Message.isThrow(data)) {
                     errorOccurred = true;
-                    callEntry.result = 'failure';
-                    callEntry.reason = data.reason;
-                    const error = (logValue = deserializeException(data.throw));
-                    callEntry.error = error2JSON(error);
-                    invokeInfo.callbackPromise.reject(error);
+                    const throw_ = (logValue = deserializeException(data.throw));
+
+                    invokeInfo.settle({
+                        result: 'failure',
+                        reason: data.reason!,
+                        throw: throw_,
+                        responseDuration,
+                    });
                 } else if (Message.isReturn(data)) {
                     errorOccurred = false;
-                    const invokeResult: DetailedInvokeResult = {
-                        result: (logValue = data.return),
+                    invokeInfo.settle({
+                        result: 'success',
+                        return: (logValue = data.return),
                         executionDuration: data.executionDuration,
                         responseDuration,
-                    };
-                    invokeInfo.callbackPromise.resolve(invokeResult);
+                    });
                 }
-
-                contextBridgePerformanceEntries.push(callEntry);
 
                 (errorOccurred ? Log.e : Log.l)(
                     `结束调用$${data.id}`,
-                    invokeInfo.funName + ', 耗时',
+                    invokeInfo.entry.call + ', 耗时',
                     responseDuration,
                     `毫秒, ${errorOccurred ? '报错' : '返回'}`,
                     logValue,

@@ -1,14 +1,4 @@
-/**
- * 详细的调用结果
- */
-export type DetailedInvokeResult<T = any> = {
-    /** 调用结果 */
-    result: T;
-    /** 执行耗时。函数在另一个上下文的执行时间。*/
-    executionDuration: number;
-    /** 响应耗时。从发出调用请求, 到收到调用信息的总耗时。 */
-    responseDuration: number;
-};
+import { InvokeEntry } from '@/types/performance';
 
 /**
  * 调用上下文
@@ -40,9 +30,9 @@ export type InvokeWithDetail = {
     <RemoteFunction extends Func = Func>(
         name: string,
         ...args: Parameters<RemoteFunction>
-    ): Promise<DetailedInvokeResult<Awaited<ReturnType<RemoteFunction>>>>;
+    ): Promise<InvokeEntry<Awaited<ReturnType<RemoteFunction>>>>;
     <RemoteFunction extends Func = Func>(
         options: InvokeOptions,
         ...args: Parameters<RemoteFunction>
-    ): Promise<DetailedInvokeResult<Awaited<ReturnType<RemoteFunction>>>>;
+    ): Promise<InvokeEntry<Awaited<ReturnType<RemoteFunction>>>>;
 };
