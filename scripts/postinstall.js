@@ -7,5 +7,18 @@ const wd = __dirname;
 const from = path.resolve(wd, '../CHANGELOG.md');
 
 // 创建 Change Log 的链接
-fs.symlinkSync(from, path.resolve(wd, '../docs/zh-CN/CHANGELOG.md'));
-fs.symlinkSync(from, path.resolve(wd, '../docs/en-US/CHANGELOG.md'));
+link(from, path.resolve(wd, '../docs/zh-CN/CHANGELOG.md'));
+link(from, path.resolve(wd, '../docs/en-US/CHANGELOG.md'));
+
+function link(from, to) {
+  if (fs.existsSync(to)) {
+    const stat = fs.statSync(to);
+    if (stat.isSymbolicLink()) {
+      fs.unlinkSync(to);
+    } else {
+      console.error('无法创建链接到:', to);
+      return;
+    }
+  }
+  fs.symlinkSync(from, to);
+}
