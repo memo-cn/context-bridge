@@ -26,6 +26,12 @@ export default defineUserConfig({
                 editLinkText: 'Edit',
                 selectLanguageText: '选择语言',
                 selectLanguageName: 'English',
+                navbar: [
+                    {
+                        text: 'Change Log',
+                        link: '/en-US/CHANGELOG.md',
+                    },
+                ],
             },
             '/zh-CN/': {
                 editLinkText: '编辑此页',
@@ -40,6 +46,10 @@ export default defineUserConfig({
                     {
                         text: 'API',
                         link: '/zh-CN/api/',
+                    },
+                    {
+                        text: '更新日志',
+                        link: '/zh-CN/CHANGELOG.md',
                     },
                 ],
                 sidebar: {

@@ -8,6 +8,7 @@
     "module": "./dist/context-bridge.es.js",
     "types": "./dist/context-bridge.es.d.ts",
     "scripts": {
+        "postinstall": "node ./scripts/postinstall.js",
         "sdk:dev": "rimraf ./dist/* && cross-env NODE_ENV=development rollup -wc",
         "sdk:build": "rimraf ./dist/* && rollup -c",
         "sdk:clean": "rimraf ./dist/*",
