@@ -1,4 +1,4 @@
-import { InvokeEntry } from '@/types/performance';
+import { InvokeEntry } from './performance';
 
 /**
  * 调用上下文
