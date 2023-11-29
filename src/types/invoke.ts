@@ -11,7 +11,11 @@ export type InvokeContext = {
 export type Func = (...args: any[]) => any;
 export type ToAsync<Fun extends Func = Func> = (...args: Parameters<Fun>) => Promise<ReturnType<Fun>>;
 
+/**
+ * 调用选项
+ */
 export type InvokeOptions = {
+    /** 调用的函数名称 */
     name: string;
 };
 
