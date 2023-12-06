@@ -88,7 +88,7 @@ const rollupOptions: RollupOptions[] = [
                 footer: 'Object.assign(globalThis, o);\n})();',
                 format: 'iife',
                 extend: false,
-                file: pkg.main.replace(/\.common\.js$/, '.iife.js'),
+                file: pkg.main.replace(/\.common\.c?js$/, '.iife.js'),
                 sourcemap,
                 plugins: [plugins.terser],
             },

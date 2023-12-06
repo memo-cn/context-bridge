@@ -1,4 +1,4 @@
-import { createContextBridge } from '../../dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 
 const mainBridge = createContextBridge({
     tag: 'main',

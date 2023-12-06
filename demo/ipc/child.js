@@ -1,4 +1,4 @@
-const { createContextBridge } = require('../../dist/context-bridge.common.js');
+const { createContextBridge } = require('../../dist/context-bridge.common.cjs');
 
 const childBridge = createContextBridge({
     logLevel: 'log',

@@ -4,9 +4,16 @@
     "version": "0.0.2",
     "description": "上下文桥（Context Bridge）是一种支持不同 JavaScript 执行环境之间相互调用的机制。Context Bridge is a mechanism that enables different JavaScript execution environments to invoke each other.",
     "homepage": "https://github.com/memo-cn/context-bridge",
-    "main": "./dist/context-bridge.common.js",
-    "module": "./dist/context-bridge.es.js",
+    "main": "./dist/context-bridge.common.cjs",
+    "module": "./dist/context-bridge.es.mjs",
     "types": "./dist/context-bridge.es.d.ts",
+    "exports": {
+        ".": {
+            "require": "./dist/context-bridge.common.cjs",
+            "import": "./dist/context-bridge.es.mjs",
+            "types": "./dist/context-bridge.es.d.ts"
+        }
+    },
     "scripts": {
         "sdk:dev": "rimraf ./dist/* && cross-env NODE_ENV=development rollup -wc --configPlugin rollup-plugin-typescript2",
         "sdk:build": "rimraf ./dist/* && rollup -c --configPlugin rollup-plugin-typescript2",

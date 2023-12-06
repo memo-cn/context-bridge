@@ -1,4 +1,4 @@
-import { createContextBridge } from '../../dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 
 var channel1 = {
     postMessage(data) {

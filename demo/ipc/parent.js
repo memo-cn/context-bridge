@@ -1,7 +1,7 @@
 const { spawn } = require('child_process');
 const { resolve } = require('path');
 
-const { createContextBridge } = require('../../dist/context-bridge.common.js');
+const { createContextBridge } = require('../../dist/context-bridge.common.cjs');
 
 const childProcess = spawn('node', [`${__dirname}/child.js`], {
     stdio: ['inherit', 'inherit', 'ignore', 'ipc'],
