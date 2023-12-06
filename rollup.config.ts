@@ -1,15 +1,29 @@
-const babel = require('@rollup/plugin-babel');
-const commonjs = require('@rollup/plugin-commonjs');
-const dts = require('rollup-plugin-dts').default;
-const eslint = require('@rollup/plugin-eslint');
-const json = require('@rollup/plugin-json');
-const nodeResolve = require('@rollup/plugin-node-resolve');
-const replace = require('@rollup/plugin-replace');
-const terser = require('@rollup/plugin-terser');
-const ts = require('rollup-plugin-typescript2');
+import babel from '@rollup/plugin-babel';
+import commonjs from '@rollup/plugin-commonjs';
+import dts from 'rollup-plugin-dts';
+import eslint from '@rollup/plugin-eslint';
+import json from '@rollup/plugin-json';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
+import terser from '@rollup/plugin-terser';
+import ts from 'rollup-plugin-typescript2';
+import { defineConfig, RollupOptions } from 'rollup';
+import pkg from './package.json' assert { type: 'json' };
 
 const plugins = {
-    babel: babel.getBabelOutputPlugin(require('./babel.config.json')),
+    babel: babel({
+        minified: true,
+        comments: false,
+        sourceMaps: true,
+        presets: [
+            [
+                '@babel/preset-env',
+                {
+                    shippedProposals: true,
+                },
+            ],
+        ],
+    }),
     commonjs: commonjs(),
     dts: dts(),
     eslint: eslint({
@@ -23,20 +37,18 @@ const plugins = {
         preventAssignment: true,
         values: {},
     }),
-    terser: new terser({
+    terser: terser({
         sourceMap: true,
     }),
     ts: ts(),
 };
-
-const pkg = require('./package.json');
 
 const isProd = process.env.NODE_ENV !== 'development';
 
 // 仅在测试阶段生成 sourcemap 。
 const sourcemap = !isProd;
 
-const rollupOptions = [
+const rollupOptions: RollupOptions[] = [
     /** 声明文件 */
     {
         input: './src/index.ts',
@@ -46,7 +58,7 @@ const rollupOptions = [
             },
         ],
         plugins: [plugins.dts, plugins.eslint, plugins.nodeResolve, plugins.json, plugins.commonjs],
-    },
+    } as RollupOptions,
     {
         plugins: [ts(), plugins.replace, plugins.eslint, plugins.nodeResolve, plugins.json, plugins.commonjs],
         input: './src/index.ts',
@@ -81,9 +93,11 @@ const rollupOptions = [
                 plugins: [plugins.terser],
             },
         ].filter((e) => e),
-    },
+    } as RollupOptions,
 ].filter((e) => e);
 
-module.exports = function ({ watch, config } = {}) {
+export default defineConfig(function (commandLineArguments) {
+    if (commandLineArguments.watch) {
+    }
     return rollupOptions;
-};
+});

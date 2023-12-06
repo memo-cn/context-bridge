@@ -8,8 +8,8 @@
     "module": "./dist/context-bridge.es.js",
     "types": "./dist/context-bridge.es.d.ts",
     "scripts": {
-        "sdk:dev": "rimraf ./dist/* && cross-env NODE_ENV=development rollup -wc",
-        "sdk:build": "rimraf ./dist/* && rollup -c",
+        "sdk:dev": "rimraf ./dist/* && cross-env NODE_ENV=development rollup -wc --configPlugin rollup-plugin-typescript2",
+        "sdk:build": "rimraf ./dist/* && rollup -c --configPlugin rollup-plugin-typescript2",
         "sdk:clean": "rimraf ./dist/*",
         "sdk:lint-check": "eslint . && prettier --check .",
         "sdk:lint-fix": "eslint --fix . && prettier --write .",
