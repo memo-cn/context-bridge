@@ -107,16 +107,28 @@ chrome.runtime.onConnect.addListener(function (port) {
 如果底层信道的可用性确实不高，并且你的调用操作是幂等的，那么你可以考虑将 [reloadChannelOnInvokeTimeout](../api/options.md#reloadchanneloninvoketimeout) 选项设为 false，并在调用失败后，使用 [reloadChannel](../api/instance.md#reloadchannel) 方法来重启信道，并自动重试调用。
 
 ```ts
-// 后台脚本可能会进入休眠状态。当内容脚本的调用失败时，尝试重新启动信道并再次进行调用。
-const real$invoke = contentBridge.invoke;
 contentBridge.invoke = async function () {
-    try {
-        return await Reflect.apply(real$invoke, this, arguments);
-    } catch (e) {
-        contentBridge.reloadChannel();
-        return await Reflect.apply(real$invoke, this, arguments);
+    const res = await contentBridge.invokeWithDetail(key, ...arguments);
+    if (res.result === 'success') {
+        // 调用成功
+        return res.return;
+    } else {
+        if (
+            res.reason === 'function not subscribed'
+         || res.reason === 'timeout'
+        ) {
+            // 函数未被订阅或调用超时
+            throw res.reason;
+        } else if (res.reason === 'function execution error') {
+            // 函数执行过程中抛出异常
+            throw res.throw;
+        } else {
+            // 其他错误（例如，后台脚本可能已进入休眠状态），重启信道并重试函数调用
+            bridge.reloadChannel('调用失败, 重启信道');
+            return await bridge.invoke(key, ...arguments);
+        }
     }
-};
+}
 ```
 
 ::: tip 提示

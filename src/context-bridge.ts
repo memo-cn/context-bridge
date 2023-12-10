@@ -73,6 +73,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         options = mergedOptions;
     };
 
+    checkObjectArgument(options, 'options', false, envDefaultLanguage);
     updateOptions({});
 
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「结束」选项参数校验 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
@@ -462,7 +463,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     connectionEntry.result = 'success';
 
                     if (isZh(trustedOptions.language)) {
-                        Log.l(`建连 #${operationRound}(${reason})成功, 耗时`, connectionEntry.duration, '毫秒。');
+                        Log.l(`建连 #${operationRound}(${reason}) 成功, 耗时`, connectionEntry.duration, '毫秒。');
                     } else {
                         Log.l(
                             `Connection #${operationRound}(${reason}) successful, used`,
@@ -805,7 +806,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     );
                 } else {
                     (arg.result === 'failure' ? Log.e : Log.l)(
-                        `Ending execution #${data.id} ${data.call}, took`,
+                        `Ending execution #${data.id} ${data.call}, used`,
                         executionDuration,
                         `milliseconds, ${arg.result === 'failure' ? 'threw' : 'returned'}`,
                         logValue,
@@ -890,7 +891,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     );
                 } else {
                     (errorOccurred ? Log.e : Log.l)(
-                        `Ending invocation #${data.id} ${invokeInfo.entry.call}, took`,
+                        `Ending invocation #${data.id} ${invokeInfo.entry.call}, used`,
                         responseDuration,
                         `milliseconds, ${errorOccurred ? 'threw' : 'returned'}`,
                         logValue,
