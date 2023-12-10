@@ -85,6 +85,12 @@ export type ChannelState = 'connecting' /** 连接中 */ | 'open' /** 已打开 
 /** 上下文桥 选项 */
 export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeChannel> = {
     /**
+     * **语言**
+     * @description 语言。默认从运行环境自动判断。可设定为 'zh-CN' 或 'en-US' 。
+     */
+    language?: 'zh-CN' | 'en-US' | null;
+
+    /**
      * **上下文标识**
      * @description 在控制台打印的日志会带有上下文标识的前缀和颜色，以便区分不同的上下文桥实例。
      */

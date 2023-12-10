@@ -18,6 +18,7 @@ import {
     checkObjectArgument,
     checkOptions,
     deserializeException,
+    envDefaultLanguage,
     error2JSON,
     isObject,
     JSON2error,
@@ -59,10 +60,10 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     let options = options$0;
 
     // 校验完成的选项对象
-    let trustedOptions: ReturnType<typeof checkOptions>;
+    let trustedOptions: ReturnType<typeof checkOptions> = null!;
 
     const updateOptions: ContextBridgeInstance['updateOptions'] = function (patchOptions) {
-        checkObjectArgument(patchOptions, 'patchOptions');
+        checkObjectArgument(patchOptions, 'patchOptions', false, trustedOptions?.language ?? envDefaultLanguage);
 
         // 合并后的选项
         const mergedOptions: ContextBridgeOptions<C> = Object.assign({}, options, patchOptions);
@@ -499,8 +500,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
         // 校验信道
         function checkChannel(channel: ContextBridgeChannel) {
-            checkObjectArgument(channel, 'channel');
-            checkFunctionArgument(channel.postMessage, 'channel.postMessage');
+            checkObjectArgument(channel, 'channel', false, trustedOptions.language);
+            checkFunctionArgument(channel.postMessage, 'channel.postMessage', false, trustedOptions.language);
         }
 
         // --------------------「结束」创建并校验信道 --------------------
@@ -563,7 +564,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             // 两个上下文的连接实际上已经建立好了
             if (Message.isConnectionNotification(data, trustedOptions.biz)) {
                 // 记录远程 tag
-                trustedOptions.remoteTag = String(data.tag || zhOrEn('远程', 'Remote'));
+                trustedOptions.remoteTag = String(data.tag || zhOrEn('远程', 'Remote', trustedOptions.language));
                 // 记录远程轮次
                 remoteRound = data.round;
                 // 计算本地 tag 颜色
@@ -637,6 +638,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     zhOrEn(
                         'channel.onmessage 的回调函数参数必须是一个对象，包含一个 data 属性，而不是一个单独的 data 值; 请将参数修改为 { data } 的形式',
                         'The callback function parameter of channel.onmessage must be an object containing a data property, not a single data value; please modify the parameter to the form of { data }',
+                        trustedOptions.language,
                     ),
                 );
             }
@@ -716,7 +718,8 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                     result: 'failure',
                     // 未订阅的这个错误只用于控制台日志, 不会传递到 entry
                     throw:
-                        `[${trustedOptions.localTag}] ` + zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call),
+                        `[${trustedOptions.localTag}] ` +
+                        zhOrEn('未订阅: ' + data.call, 'unsubscribed: ' + data.call, trustedOptions.language),
                     reason: 'function not subscribed',
                 });
             } else {
@@ -801,24 +804,30 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         listener: Fun,
         options?: { override: boolean },
     ) {
-        checkArgumentsCount(arguments, 2);
-        checkFunctionArgument(listener, 'listener');
+        checkArgumentsCount(arguments, 2, trustedOptions.language);
+        checkFunctionArgument(listener, 'listener', false, trustedOptions.language);
 
         let nameOrMatcher: string | NameMatcher = '';
         if (isObject(name)) {
-            checkFunctionArgument(name.test, 'nameMatcher.test');
+            checkFunctionArgument(name.test, 'nameMatcher.test', false, trustedOptions.language);
             nameOrMatcher = name as any;
         } else {
             if (typeof name !== 'string') {
-                throw new TypeError(zhOrEn(`name(${str(name)}) 不是字符串。`, `name(${str(name)}) is not a string.`));
+                throw new TypeError(
+                    zhOrEn(
+                        `name(${str(name)}) 不是字符串。`,
+                        `name(${str(name)}) is not a string.`,
+                        trustedOptions.language,
+                    ),
+                );
             }
             nameOrMatcher = name;
         }
 
-        checkObjectArgument(options, 'options', true);
+        checkObjectArgument(options, 'options', true, trustedOptions.language);
 
         let isOverridden = false;
-        let canOverride = checkBooleanArgument(options?.override, false, 'options.override');
+        let canOverride = checkBooleanArgument(options?.override, false, 'options.override', trustedOptions.language);
 
         const fun$existing = nameOrMatcher2function.get(nameOrMatcher);
         if (fun$existing) {
@@ -850,7 +859,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
     };
 
     const removeInvokeListener: ContextBridgeInstance['removeInvokeListener'] = function (name: any) {
-        checkArgumentsCount(arguments, 1);
+        checkArgumentsCount(arguments, 1, trustedOptions.language);
 
         const name$string = String(name);
         const index = nameMatcherList.indexOf(name);
@@ -897,11 +906,11 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             return channelStateReason;
         },
 
-        reloadChannel(reason = zhOrEn('手动重启信道', 'manually restart the channel')) {
+        reloadChannel(reason = zhOrEn('手动重启信道', 'manually restart the channel', trustedOptions.language)) {
             operateChannel(reason, 'reload');
         },
 
-        closeChannel(reason = zhOrEn('手动停止信道', 'manually close the channel')) {
+        closeChannel(reason = zhOrEn('手动停止信道', 'manually close the channel', trustedOptions.language)) {
             operateChannel(reason, 'close');
         },
 
@@ -910,7 +919,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
 
     /* ● ● ● ● ● ● ● ● ● ● ● ● ● ● ●「结束」上下文桥实例 ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● */
 
-    instance.reloadChannel(zhOrEn('初始化', 'initialization'));
+    instance.reloadChannel(zhOrEn('初始化', 'initialization', trustedOptions.language));
 
     return instance;
 }

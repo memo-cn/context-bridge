@@ -7,11 +7,14 @@ import {
     checkStringArgument,
     checkTimeoutArgument,
 } from './check';
-import { zhOrEn } from './language';
+import { envDefaultLanguage, zhOrEn } from './language';
 import { str } from './value';
 
 export function checkOptions(options: ContextBridgeOptions<any>) {
     const trustedOptions = {
+        // 语言
+        language: envDefaultLanguage,
+
         // 远程 tag
         remoteTag: '',
 
@@ -40,24 +43,58 @@ export function checkOptions(options: ContextBridgeOptions<any>) {
         onPerformanceEntry: function () {} as (entries: ContextBridgePerformanceEntry) => void,
     };
 
-    checkArgumentsCount(arguments, 1);
-    checkObjectArgument(options, 'options');
-    checkFunctionArgument(options.createChannel, 'options.createChannel');
+    checkArgumentsCount(arguments, 1, trustedOptions.language);
+    checkObjectArgument(options, 'options', false, trustedOptions.language);
+
+    // 校验语言
+    if (typeof options.language !== 'undefined') {
+        const arr = ['zh-CN', 'en-US'] as const;
+        if (options.language === null) {
+            // 使用默认
+        } else if (arr.includes(options.language)) {
+            trustedOptions.language = options.language;
+        } else {
+            throw new TypeError(
+                zhOrEn(
+                    `options.language(${str(options.language)}) 有误, 应为 ${arr
+                        .map((x) => `'${x}'`)
+                        .join(', ')} 之一。`,
+                    `options.language(${str(options.language)}) is invalid, it should be one of ${arr
+                        .map((x) => `'${x}'`)
+                        .join(', ')}.`,
+                    trustedOptions.language,
+                ),
+            );
+        }
+    }
+
+    checkFunctionArgument(options.createChannel, 'options.createChannel', false, trustedOptions.language);
 
     // 检验本地 tag
-    trustedOptions.localTag = checkStringArgument(options.tag, '', 'options.tag');
+    trustedOptions.localTag = checkStringArgument(options.tag, '', 'options.tag', trustedOptions.language);
 
     // 检验业务标识
-    trustedOptions.biz = checkStringArgument(options.biz, void 0, 'options.biz');
+    trustedOptions.biz = checkStringArgument(options.biz, void 0, 'options.biz', trustedOptions.language);
 
-    trustedOptions.connectTimeout = checkTimeoutArgument(options.connectTimeout, 5000, 'options.connectTimeout');
-    trustedOptions.invokeTimeout = checkTimeoutArgument(options.invokeTimeout, 5000, 'options.invokeTimeout');
+    trustedOptions.connectTimeout = checkTimeoutArgument(
+        options.connectTimeout,
+        5000,
+        'options.connectTimeout',
+        trustedOptions.language,
+    );
+    trustedOptions.invokeTimeout = checkTimeoutArgument(
+        options.invokeTimeout,
+        5000,
+        'options.invokeTimeout',
+        trustedOptions.language,
+    );
 
     // 建连超时时是否再次重启信道
     trustedOptions.reloadChannelOnConnectionFailure = checkBooleanArgument(
         options.reloadChannelOnConnectionFailure,
         true,
         'options.reloadChannelOnConnectionFailure',
+        trustedOptions.language,
     );
 
     // 函数调用超时时是否自动重启信道
@@ -65,9 +102,10 @@ export function checkOptions(options: ContextBridgeOptions<any>) {
         options.reloadChannelOnInvokeTimeout,
         true,
         'options.reloadChannelOnInvokeTimeout',
+        trustedOptions.language,
     );
 
-    checkFunctionArgument(options.onPerformanceEntry, 'options.onPerformanceEntry', true);
+    checkFunctionArgument(options.onPerformanceEntry, 'options.onPerformanceEntry', true, trustedOptions.language);
     if (options.onPerformanceEntry) {
         trustedOptions.onPerformanceEntry = options.onPerformanceEntry;
     }
@@ -84,6 +122,7 @@ export function checkOptions(options: ContextBridgeOptions<any>) {
                     `options.logLevel(${str(options.logLevel)}) is invalid, it should be one of ${arr
                         .map((x) => `'${x}'`)
                         .join(', ')}.`,
+                    trustedOptions.language,
                 ),
             );
         }
