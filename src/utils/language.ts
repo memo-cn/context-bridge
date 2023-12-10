@@ -26,3 +26,7 @@ export function zhOrEn(zh: string, en: string, language: 'zh-CN' | 'en-US') {
     }
     return envDefaultLanguage === 'zh-CN' ? zh : en;
 }
+
+export function isZh(language: 'zh-CN' | 'en-US') {
+    return language === 'zh-CN';
+}

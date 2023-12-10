@@ -34,7 +34,7 @@ export function checkStringArgument<T>(value: any, default_: T, literal: string,
         return value;
     } else {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是字符串。`, `${literal}(${str(value)}) is not a string.`, language),
+            zhOrEn(`${literal}(${str(value)}) 不是字符串`, `${literal}(${str(value)}) is not a string`, language),
         );
     }
 }
@@ -59,7 +59,7 @@ export function checkBooleanArgument(
         return value;
     }
     throw new TypeError(
-        zhOrEn(`${literal}(${str(value)}) 不是布尔值。`, `${literal}(${str(value)}) is not a boolean.`, language),
+        zhOrEn(`${literal}(${str(value)}) 不是布尔值`, `${literal}(${str(value)}) is not a boolean`, language),
     );
 }
 
@@ -78,7 +78,7 @@ export function checkObjectArgument(value: any, literal: string, optional: boole
     }
     if (!isObject(value)) {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是对象。`, `${literal}(${str(value)}) is not a object.`, language),
+            zhOrEn(`${literal}(${str(value)}) 不是对象`, `${literal}(${str(value)}) is not a object`, language),
         );
     }
 }
@@ -98,7 +98,7 @@ export function checkFunctionArgument(value: any, literal: string, optional: boo
     }
     if (typeof value !== 'function') {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是函数。`, `${literal}(${str(value)}) is not a function.`, language),
+            zhOrEn(`${literal}(${str(value)}) 不是函数`, `${literal}(${str(value)}) is not a function`, language),
         );
     }
 }
@@ -124,7 +124,7 @@ export function checkTimeoutArgument(
     // 非数值
     if (typeof value !== 'number') {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是数值。`, `${literal}(${str(value)}) is not a number.`, language),
+            zhOrEn(`${literal}(${str(value)}) 不是数值`, `${literal}(${str(value)}) is not a number`, language),
         );
     }
 
@@ -137,8 +137,8 @@ export function checkTimeoutArgument(
         // 负数
         throw new TypeError(
             zhOrEn(
-                `${literal}(${str(value)}) 不能为负数。`,
-                `${literal}(${str(value)}) cannot be a negative number.`,
+                `${literal}(${str(value)}) 不能为负数`,
+                `${literal}(${str(value)}) cannot be a negative number`,
                 language,
             ),
         );
@@ -153,5 +153,5 @@ export function checkTimeoutArgument(
     }
 
     // 数值非法。
-    throw new TypeError(zhOrEn(`${literal}(${str(value)}) 非法。`, `${literal}(${str(value)}) is illegal.`, language));
+    throw new TypeError(zhOrEn(`${literal}(${str(value)}) 非法`, `${literal}(${str(value)}) is illegal`, language));
 }
