@@ -21,7 +21,6 @@ import {
     envDefaultLanguage,
     error2JSON,
     isObject,
-    JSON2error,
     serializeException,
     setExponentialInterval,
     str,
@@ -259,7 +258,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             });
         }
 
-        Log.l(`开始调用$${id}`, `${name}, 入参`, args);
+        Log.l(`开始调用 #${id}`, `${name}, 入参`, args);
 
         try {
             const m: Message.Call = Message.addNamespaceParams(
@@ -420,13 +419,13 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         channel = {
             onmessage: null,
             postMessage(message: any): void {
-                throw `信道#${operationRound}(${reason})未就绪。`;
+                throw `信道 #${operationRound}(${reason})未就绪。`;
             },
         };
 
         if (op === 'close') {
-            readyTimePromiseReject(`信道#${operationRound}(${reason})已被关闭。`);
-            Log.l(`信道#${operationRound}(${reason})已被关闭。`);
+            readyTimePromiseReject(`信道 #${operationRound}(${reason})已被关闭。`);
+            Log.l(`信道 #${operationRound}(${reason})已被关闭。`);
             return;
         }
 
@@ -435,7 +434,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 (readyTime) => {
                     connectionEntry.duration = readyTime - connectionEntry.startTime;
                     connectionEntry.result = 'success';
-                    Log.l(`建连#${operationRound}(${reason})成功, 耗时`, connectionEntry.duration, '毫秒。');
+                    Log.l(`建连 #${operationRound}(${reason})成功, 耗时`, connectionEntry.duration, '毫秒。');
                     setChannelState('open', reason);
                 },
                 (reason) => {
@@ -454,7 +453,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                             interval = 0;
                         }
                         const tid = setTimeout(() => {
-                            instance.reloadChannel(`建连#${operationRound}失败, 自动重启信道`);
+                            instance.reloadChannel(`建连 #${operationRound}失败, 自动重启信道`);
                         }, interval);
                         innerDisposeTasks.push(() => clearTimeout(tid));
                     }
@@ -512,12 +511,12 @@ export function createContextBridge<C extends ContextBridgeChannel>(
         // ····················「开始」建连 ····················
 
         // 向另一个上下文发送一次 ready
-        Log.l(`建连#${operationRound}(${reason})开始。`);
+        Log.l(`建连 #${operationRound}(${reason})开始。`);
         const stopSendReady = setExponentialInterval(sendReady, 100);
 
         innerDisposeTasks.push(() => {
             stopSendReady();
-            readyTimePromiseReject(`建连#${operationRound}(${reason})任务被取消。`);
+            readyTimePromiseReject(`建连 #${operationRound}(${reason})任务被取消。`);
             if (!connectionEntry.reason) {
                 connectionEntry.reason = 'connection cancelled';
             }
@@ -529,7 +528,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
             setTimeout(() => {
                 stopSendReady();
                 // 如果建连已经完成了, 下面的代码不会导致报错。
-                readyTimePromiseReject(`建连#${c$1}(${reason})超过 ${timeout} 毫秒未完成`);
+                readyTimePromiseReject(`建连 #${c$1}(${reason})超过 ${timeout} 毫秒未完成`);
                 if (!connectionEntry.reason) {
                     connectionEntry.reason = 'timeout';
                 }
@@ -549,7 +548,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 channel.postMessage(m);
             } catch (e) {
                 stopSendReady();
-                readyTimePromiseReject(`建连#${operationRound}(${reason})失败 ${str(e)}`);
+                readyTimePromiseReject(`建连 #${operationRound}(${reason})失败 ${str(e)}`);
                 if (!connectionEntry.reason) {
                     connectionEntry.reason = 'message sending failed';
                     connectionEntry.error = error2JSON(e);
@@ -673,7 +672,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 }
             }
 
-            Log.l(`开始执行$${data.id}`, data.call + ', 入参', data.args);
+            Log.l(`开始执行 #${data.id}`, data.call + ', 入参', data.args);
 
             let startTime = Date.now();
             const setResult = (
@@ -701,7 +700,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 }
 
                 (arg.result === 'failure' ? Log.e : Log.l)(
-                    `结束执行$${data.id}`,
+                    `结束执行 #${data.id}`,
                     data.call + ',',
                     '耗时',
                     executionDuration,
@@ -770,7 +769,7 @@ export function createContextBridge<C extends ContextBridgeChannel>(
                 }
 
                 (errorOccurred ? Log.e : Log.l)(
-                    `结束调用$${data.id}`,
+                    `结束调用 #${data.id}`,
                     invokeInfo.entry.call + ', 耗时',
                     responseDuration,
                     `毫秒, ${errorOccurred ? '报错' : '返回'}`,
