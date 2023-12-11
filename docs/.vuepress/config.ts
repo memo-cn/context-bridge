@@ -28,10 +28,31 @@ export default defineUserConfig({
                 selectLanguageName: 'English',
                 navbar: [
                     {
+                        text: 'Guide',
+                        link: '/en-US/guide/quick-start.md',
+                        activeMatch: '/en-US/guide/',
+                    },
+                    {
+                        text: 'API',
+                        link: '/en-US/api/',
+                    },
+                    {
                         text: 'Change Log',
                         link: '/en-US/CHANGELOG.md',
                     },
                 ],
+                sidebar: {
+                    '/en-US/guide/': [
+                        { text: 'Guide', children: ['quick-start.md', 'scenario-examples.md', 'practical-skills.md'] },
+                    ],
+                    '/en-US/api/': [
+                        {
+                            text: 'API',
+                            link: '.',
+                            children: ['options.md', 'instance.md', 'performance-entry.md'],
+                        },
+                    ],
+                },
             },
             '/zh-CN/': {
                 editLinkText: '编辑此页',

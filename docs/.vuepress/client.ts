@@ -5,7 +5,7 @@ export default defineClientConfig({
         // 访问首页时结合浏览器语言进行重定向
         router.afterEach(function (to, from) {
             if (to.path === '/') {
-                if (String(globalThis?.navigator?.language).match(/zh/)) {
+                if (String((globalThis as any)?.navigator?.language).match(/zh/)) {
                     router.replace('/zh-CN/');
                 } else {
                     router.replace('/en-US/');

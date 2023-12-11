@@ -2,7 +2,7 @@
     "name": "context-bridge",
     "private": false,
     "version": "0.0.2",
-    "description": "上下文桥（Context Bridge）是一种支持不同 JavaScript 执行环境之间相互调用的机制。Context Bridge is a mechanism that enables different JavaScript execution environments to invoke each other.",
+    "description": "上下文桥（Context Bridge）是一种支持不同 JavaScript 执行环境之间相互调用的机制。Context Bridge is a mechanism that enables different JavaScript execution contexts to invoke each other.",
     "homepage": "https://github.com/memo-cn/context-bridge",
     "main": "./dist/context-bridge.common.cjs",
     "module": "./dist/context-bridge.es.mjs",
