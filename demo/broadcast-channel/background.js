@@ -2,8 +2,7 @@ import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 
 const bridge = createContextBridge({
     tag: 'background page',
-    logLevel: 'debug',
-    language: 'en-US',
+    // logLevel: 'silent',
     createChannel: () => new BroadcastChannel('bc'),
 });
 

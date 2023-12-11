@@ -4,7 +4,7 @@
 
 ## language
 
-语言。默认从运行环境自动判断。可设定为 'zh-CN' 或 'en-US' 。
+语言。主要决定日志提示的语言。默认从运行环境自动选择。可设定为 'zh-CN' 或 'en-US' 。
 
 ## tag
 
@@ -17,7 +17,7 @@ biz 参数要么都设置且相同，要么都不设置。
 
 ## logLevel
 
-日志级别。低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'verbose' | 'warning' | 'error' 。
+日志级别。低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'silent' | 'error' | 'warning' | 'log' | 'debug' 。
 
 ## createChannel
 

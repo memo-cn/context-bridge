@@ -6,7 +6,7 @@ export enum LogLevel {
      * 屏蔽日志
      * 不输出任何日志
      */
-    none = 0,
+    silent = 0,
 
     /**
      * 错误级别
@@ -86,7 +86,7 @@ export type ChannelState = 'connecting' /** 连接中 */ | 'open' /** 已打开 
 export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeChannel> = {
     /**
      * **语言**
-     * @description 语言。默认从运行环境自动判断。可设定为 'zh-CN' 或 'en-US' 。
+     * @description 语言。主要决定日志提示的语言。默认从运行环境自动选择。可设定为 'zh-CN' 或 'en-US' 。
      */
     language?: 'zh-CN' | 'en-US' | null;
 
@@ -106,7 +106,7 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeC
 
     /**
      * **日志级别**
-     * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'verbose' | 'warning' | 'error' 。
+     * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'silent' | 'error' | 'warning' | 'log' | 'debug' 。
      */
     logLevel?: keyof typeof LogLevel;
 

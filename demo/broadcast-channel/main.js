@@ -3,7 +3,7 @@ import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 const bridge = createContextBridge({
     tag: 'main page',
     logLevel: 'debug',
-    language: 'en-US',
+    // language: 'en-US',
     createChannel: () => new BroadcastChannel('bc'),
 });
 
@@ -13,3 +13,5 @@ try {
 } catch (e) {
     console.log('报错', e);
 }
+
+console.log(bridge);

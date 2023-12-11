@@ -19,22 +19,26 @@ const majorVersion = getMajorVersion(version);
 // 上下文桥消息
 export type ContextBridgeMessage = {
     [nsKey]: {
-        version: string;
+        // version: string;
         biz: Biz;
     };
 };
 
 // 给消息加上命名空间参数
 export function addNamespaceParams<T>(msg: T, { biz }: { biz: Biz }): T & ContextBridgeMessage {
-    return Object.assign(
+    const m = Object.assign(
         {
             [nsKey]: {
-                version,
+                // version,
                 biz,
             },
         },
         msg,
     );
+    if (biz === void 0) {
+        delete m[nsKey].biz;
+    }
+    return m;
 }
 
 // 记录被消费的消息
