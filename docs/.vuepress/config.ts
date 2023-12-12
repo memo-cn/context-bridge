@@ -24,7 +24,7 @@ export default defineUserConfig({
         locales: {
             '/en-US/': {
                 editLinkText: 'Edit',
-                selectLanguageText: '选择语言',
+                selectLanguageText: '切换语言',
                 selectLanguageName: 'English',
                 navbar: [
                     {

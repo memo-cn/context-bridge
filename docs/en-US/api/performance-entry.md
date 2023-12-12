@@ -1,73 +1,76 @@
-# 性能指标（Performance Entry）
+# Performance Entry
 
-性能指标是一个对象，反映上下文桥中发生的事件的性能信息。有两种类型的性能指标：连接指标（Connection Entry）和调用指标（Invoke
-Entry）。
+The performance entry is an object that reflects the performance information
+of events occurring in the context bridge.
+There are two types of performance entries: Connection Entry and Invoke Entry.
 
-## 连接指标（Connection Entry）
+## Connection Entry
 
-连接指标是一个对象，反映上下文桥建立连接时的性能信息。
+The connection entry is an object that reflects the performance information when the context bridge establishes a
+connection.
 
-| 属性      | 类型                   | 含义                           |
-| --------- | ---------------------- | ------------------------------ |
-| tag       | string                 | 上下文标识                     |
-| entryType | 'connection'           | 指标类型，表示建连             |
-| startTime | number                 | 开始建立连接的时间戳           |
-| duration  | number                 | 建连耗时                       |
-| result    | 'success' \| 'failure' | 建连结果                       |
-| reason    |                        | 建连失败的原因                 |
-| error     |                        | 发生错误时, 对错误信息进行记录 |
+| Property  | Type                   | Meaning                                         |
+| --------- | ---------------------- | ----------------------------------------------- |
+| tag       | string                 | Context identifier                              |
+| entryType | 'connection'           | Entry type, indicating connection               |
+| startTime | number                 | Timestamp when connection starts                |
+| duration  | number                 | Connection duration                             |
+| result    | 'success' \| 'failure' | Connection result                               |
+| reason    |                        | Reason for connection failure                   |
+| error     |                        | Error information recorded when an error occurs |
 
-当 result 为 'failure' 时, 有 reason 和 error 属性。
+When the result is 'failure', there are reason and error properties.
 
-reason 在连接指标中的可能取值有:
+Possible values for reason in connection entry:
 
-| 类型                      | 含义               |
-| ------------------------- | ------------------ |
-| 'timeout'                 | 建立任务超时未完结 |
-| 'connection cancelled'    | 建连任务被取消     |
-| 'channel creation failed' | 信道创建失败       |
-| 'message sending failed'  | 消息发送失败       |
+| Type                      | Meaning                                |
+| ------------------------- | -------------------------------------- |
+| 'timeout'                 | Connection task did not finish in time |
+| 'connection cancelled'    | Connection task was cancelled          |
+| 'channel creation failed' | Channel creation failed                |
+| 'message sending failed'  | Message sending failed                 |
 
-error 的属性有:
+Properties of error:
 
-| 属性    | 类型   | 含义 |
-| ------- | ------ | ---- |
-| name    | string | 名称 |
-| message | string | 信息 |
-| stack   | string | 堆栈 |
+| Property | Type   |
+| -------- | ------ |
+| name     | string |
+| message  | string |
+| stack    | string |
 
-## 调用指标（Invoke Entry）
+## Invoke Entry
 
-调用指标是一个对象，反映上下文桥调用函数时的性能信息。
+An invoke entry is an object that reflects the performance information when the context bridge calls a function.
 
-| 属性              | 类型                   | 含义                           |
-| ----------------- | ---------------------- | ------------------------------ |
-| tag               | string                 | 上下文标识                     |
-| entryType         | 'invoke'               | 指标类型，表示函数调用         |
-| startTime         | number                 | 开始调用的时间戳               |
-| executionDuration | number                 | 执行耗时                       |
-| responseDuration  | number                 | 响应耗时                       |
-| call              | string                 | 调用的函数名称                 |
-| result            | 'success' \| 'failure' | 调用结果                       |
-| reason            |                        | 调用失败的原因                 |
-| error             |                        | 发生错误时, 对错误信息进行记录 |
-| return            |                        | 调用函数返回值                 |
-| throw             |                        | 调用函数抛出的错误或异常信息   |
+| Property          | Type                   | Meaning                                                    |
+| ----------------- | ---------------------- | ---------------------------------------------------------- |
+| tag               | string                 | Context identifier                                         |
+| entryType         | 'invoke'               | Entry type, indicating function call                       |
+| startTime         | number                 | Timestamp when call starts                                 |
+| executionDuration | number                 | Execution duration                                         |
+| responseDuration  | number                 | Response duration                                          |
+| call              | string                 | Name of the function called                                |
+| result            | 'success' \| 'failure' | Call result                                                |
+| reason            |                        | Reason for call failure                                    |
+| error             |                        | Error information recorded when an error occurs            |
+| return            |                        | Return value of the function call                          |
+| throw             |                        | Error or exception information thrown by the function call |
 
-::: tip 提示
+::: tip
 
-`throw` 是指被调用的函数在执行过程中抛出的错误，而 `error` 则可能是在上下文桥调用外部接口时产生的错误。
+`throw` refers to errors thrown during the execution of the called function,
+while `error` may be errors that occur when the context bridge calls an external interface.
 
-当调用失败时，`error` 字段可能不存在。例如，调用超时就不是由于 JS 代码报错导致的。
+When the call fails, the `error` field may not exist. For example, a timeout is not caused by a JS code error.
 
 :::
 
-reason 在调用指标中的可能取值有:
+Possible values for reason in invoke entry:
 
-| 类型                       | 含义               |
-| -------------------------- | ------------------ |
-| 'timeout'                  | 调用任务超时未完结 |
-| 'invoke cancelled'         | 调用任务被取消     |
-| 'message sending failed'   | 消息发送失败       |
-| 'function execution error' | 函数执行报错       |
-| 'function not subscribed'  | 函数未被订阅       |
+| Type                       | Meaning                          |
+| -------------------------- | -------------------------------- |
+| 'timeout'                  | Call task did not finish in time |
+| 'invoke cancelled'         | Call task was cancelled          |
+| 'message sending failed'   | Message sending failed           |
+| 'function execution error' | Function execution error         |
+| 'function not subscribed'  | Function not subscribed          |

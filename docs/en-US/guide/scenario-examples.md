@@ -128,8 +128,12 @@ contentBridge.invoke = async function () {
             // An exception was thrown during function execution
             throw res.throw;
         } else {
-            // Other errors (for example, the background script may have entered sleep state), restart the channel and retry the function call
-            bridge.reloadChannel('调用失败, 重启信道');
+            /**
+             * Other errors (for example, the background script
+             * may have entered sleep state),
+             * restart the channel and retry the function call
+             */
+            bridge.reloadChannel('The call failed, restart the channel');
             return await bridge.invoke(key, ...arguments);
         }
     }

@@ -1,8 +1,8 @@
-# 实用技巧
+# Practical Tips
 
-## 回环测试
+## Loopback Testing
 
-可以直接将 window 作为信道, 创建上下文桥, 进行回环测试。
+You can directly use window as the channel to create a context bridge and perform loopback testing.
 
 ```typescript
 var bridge = createContextBridge({
@@ -10,11 +10,11 @@ var bridge = createContextBridge({
 });
 ```
 
-## 负载均衡
+## Load Balancing
 
-如果需要在一个主执行环境中与多个幂等的子执行环境通信，那么可以将实例进行组合，并使调用任务尽可能被转发到空闲的实例上。
+If you need to communicate with multiple idempotent child execution contexts in a main execution context, you can combine instances and make the call tasks as much as possible forwarded to the idle instances.
 
-例如，在主线程中创建多个子线程，并分别创建与它们对应的上下文桥实例：
+For example, create multiple child threads in the main thread and create context bridge instances corresponding to them:
 
 ```typescript
 const bridgeList = Array(3).map(
@@ -24,7 +24,7 @@ const bridgeList = Array(3).map(
     }));
 ```
 
-然后，实现负载均衡算法。用于寻找一个信道打开，没有调用任务的上下文桥实例。如果都不符合条件，则随机选择一个：
+Then, implement the load balancing algorithm. Used to find a context bridge instance with a channel open and no calling task. If none of them meet the conditions, select one randomly:
 
 ```typescript
 function findAvailableBridge() {
@@ -34,7 +34,7 @@ function findAvailableBridge() {
 }
 ```
 
-最后，封装一个虚拟实例，在内部将调用任务转发给空闲的上下文桥实例：
+Finally, encapsulate a virtual instance that internally forwards the calling task to an idle context bridge instance:
 
 ```typescript
 const combinedBridge: ContextBridgeInstance = new Proxy({}, {
