@@ -24,8 +24,35 @@ export default defineUserConfig({
         locales: {
             '/en-US/': {
                 editLinkText: 'Edit',
-                selectLanguageText: '选择语言',
+                selectLanguageText: '切换语言',
                 selectLanguageName: 'English',
+                navbar: [
+                    {
+                        text: 'Guide',
+                        link: '/en-US/guide/quick-start.md',
+                        activeMatch: '/en-US/guide/',
+                    },
+                    {
+                        text: 'API',
+                        link: '/en-US/api/',
+                    },
+                    {
+                        text: 'Change Log',
+                        link: '/en-US/CHANGELOG.md',
+                    },
+                ],
+                sidebar: {
+                    '/en-US/guide/': [
+                        { text: 'Guide', children: ['quick-start.md', 'scenario-examples.md', 'practical-skills.md'] },
+                    ],
+                    '/en-US/api/': [
+                        {
+                            text: 'API',
+                            link: '.',
+                            children: ['options.md', 'instance.md', 'performance-entry.md'],
+                        },
+                    ],
+                },
             },
             '/zh-CN/': {
                 editLinkText: '编辑此页',
@@ -41,10 +68,14 @@ export default defineUserConfig({
                         text: 'API',
                         link: '/zh-CN/api/',
                     },
+                    {
+                        text: '更新日志',
+                        link: '/zh-CN/CHANGELOG.md',
+                    },
                 ],
                 sidebar: {
                     '/zh-CN/guide/': [
-                        { text: '指南', children: ['quick-start.md', 'scenario-examples.md', 'advanced-skills.md'] },
+                        { text: '指南', children: ['quick-start.md', 'scenario-examples.md', 'practical-skills.md'] },
                     ],
                     '/zh-CN/api/': [
                         {

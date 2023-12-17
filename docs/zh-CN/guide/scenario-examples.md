@@ -3,21 +3,21 @@
 如果能在不同 JavaScript 执行环境内相互获取到对方上下文对象的引用，或者在一个环境内能访问到与另一个环境通信的接口，即
 onmessage 方法和支持[结构化克隆算法](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)的 postMessage 方法，那么就可以通过上下文桥实现不同执行环境中函数的相互调用。
 
-## 回环测试
-
-可以直接将 window 作为信道, 创建上下文桥, 进行回环测试。
-
-```typescript
-var bridge = createContextBridge({
-    createChannel: () => window,
-});
-```
-
-## 后台线程（Worker）
+## 工作线程（Worker）
 
 在[快速开始](./quick-start.md)章节，介绍了主线程和 Worker 线程之间可以通过上下文桥进行相互调用。
 
 接下来，我将再举一些常见的例子，展示如何在更多的场景中获取或创建信道，以便创建上下文桥。
+
+## 广播频道（BroadcastChannel）
+
+如果两个执行环境是同源的，那么最简单的方式就是将[广播频道](https://developer.mozilla.org/zh-CN/docs/Web/API/BroadcastChannel)作为信道，创建上下文桥。
+
+```typescript
+var bridge = createContextBridge({
+    createChannel: () => new BroadcastChannel('exampleName')
+});
+```
 
 ## 内嵌窗口（Iframe）
 
@@ -60,13 +60,124 @@ var iframeBridge = createContextBridge({
 });
 ```
 
-## 广播频道（BroadcastChannel）
+## 后台脚本（Background scripts）
 
-如果两个执行环境是同源的，那么最简单的方式就是将[广播频道](https://developer.mozilla.org/zh-CN/docs/Web/API/BroadcastChannel)作为信道，创建上下文桥。
+在内容脚本里，使用 [chrome.runtime.connect](https://developer.chrome.com/docs/extensions/reference/runtime/#method-connect) 方法来连接后台脚本，然后将返回的 port 作为信道，创建上下文桥。
 
-```typescript
-var bridge = createContextBridge({
-    createChannel: () => new BroadcastChannel('exampleName')
+```javascript
+var contentBridge = createContextBridge({
+    createChannel() {
+        const port = chrome.runtime.connect();
+        const channel = {
+            postMessage(data) {
+                port.postMessage(data);
+            },
+        };
+        port.onMessage.addListener(function (data, port) {
+            channel?.onmessage?.({ data });
+        });
+        return channel;
+    },
+});
+```
+
+在后台脚本里，使用 [chrome.runtime.onConnect](https://developer.chrome.com/docs/extensions/reference/runtime/#event-onConnect) 事件监听器来接收内容脚本的连接请求，然后同样使用 port 对象作为信道，创建上下文桥。
+
+```javascript
+chrome.runtime.onConnect.addListener(function (port) {
+    const channel = {
+        postMessage(data) {
+            port.postMessage(data);
+        },
+    };
+    port.onMessage.addListener(function (data, port) {
+        channel?.onmessage?.({ data });
+    });
+
+    const backgroundBridge = createContextBridge({
+        createChannel: () => channel
+    });
+});
+```
+
+请注意，port.onMessage 的参数是一个消息值，而不是一个事件对象。如果你比较细心，可能会发现需要将其作为 data 属性的值，再传递给信道的 onmessage 回调函数。不过，如果你不小心直接传递了消息值，上下文桥也会提示报错信息。
+
+我认为在应用层实现的保活机制只是重复封装，在增加负载的同时也无法确保每次调用都能成功。因此，上下文桥并未内置任何保活机制。
+
+如果底层信道的可用性确实不高，并且你的调用操作是幂等的，那么你可以考虑将 [reloadChannelOnInvokeTimeout](../api/options.md#reloadchanneloninvoketimeout) 选项设为 false，并在调用失败后，使用 [reloadChannel](../api/instance.md#reloadchannel) 方法来重启信道，并自动重试调用。
+
+```ts
+contentBridge.invoke = async function () {
+    const res = await contentBridge.invokeWithDetail(key, ...arguments);
+    if (res.result === 'success') {
+        // 调用成功
+        return res.return;
+    } else {
+        if (
+            res.reason === 'function not subscribed'
+         || res.reason === 'timeout'
+        ) {
+            // 函数未被订阅或调用超时
+            throw res.reason;
+        } else if (res.reason === 'function execution error') {
+            // 函数执行过程中抛出异常
+            throw res.throw;
+        } else {
+            // 其他错误（例如，后台脚本可能已进入休眠状态），重启信道并重试函数调用
+            bridge.reloadChannel('调用失败, 重启信道');
+            return await bridge.invoke(key, ...arguments);
+        }
+    }
+}
+```
+
+::: tip 提示
+你可以在创建上下文桥或发出重启信道指令后立即发起调用，无需等待底层信道连接准备就绪。上下文桥会在连接成功建立后才真正发送调用消息。
+:::
+
+## 进程间通信（IPC）
+
+在父进程脚本中，通过 [spawn](https://nodejs.org/api/child_process.html#child_processspawncommand-args-options) 创建子进程，并将 stdio 数组的第四个参数指定为 'ipc'。
+
+```js
+var childProcess = spawn('node', ['child.js'], {
+    stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+});
+```
+
+然后，将子进程的引用作为信道，创建上下文桥。
+
+```js
+var parentBridge = createContextBridge({
+    createChannel() {
+        const channel = {
+            postMessage(data) {
+                childProcess.send(data);
+            },
+        };
+        childProcess.on('message', function (data) {
+            channel?.onmessage?.({ data });
+        });
+        return channel;
+    },
+});
+```
+
+在子进程脚本中，使用 process 对象作为信道，创建上下文桥。
+
+```js
+var childBridge = createContextBridge({
+    createChannel() {
+        const channel = {
+            postMessage(message) {
+                process.send(message);
+            },
+        };
+        process.on('message', function (data) {
+            channel?.onmessage?.({ data });
+        });
+        return channel;
+    },
 });
 ```
 

@@ -1,4 +1,4 @@
-import { createContextBridge } from '../../dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 
 var channel1 = {
     postMessage(data) {
@@ -14,13 +14,13 @@ var channel2 = {
 
 var bridge1 = (window.a = createContextBridge({
     tag: 'bridge1',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel: () => channel1,
 }));
 
 var bridge2 = (window.b = createContextBridge({
     tag: 'bridge2',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel: () => channel2,
 }));
 

@@ -1,11 +1,17 @@
-import { createContextBridge } from '../../dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 
 const bridge = createContextBridge({
     tag: 'main page',
-    logLevel: 'verbose',
+    logLevel: 'debug',
+    // language: 'en-US',
     createChannel: () => new BroadcastChannel('bc'),
 });
 
-console.log('1 + 2 =', await bridge.invoke('sum', 1, 2));
+try {
+    const res = await bridge.invokeWithDetail('sum', 3);
+    console.log('返回', res);
+} catch (e) {
+    console.log('报错', e);
+}
 
-console.log('5 + x =', await bridge.invoke('sum', 5, 'x'));
+console.log(bridge);

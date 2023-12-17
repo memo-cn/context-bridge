@@ -1,8 +1,8 @@
-import { createContextBridge } from '../../dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 
 const mainBridge = createContextBridge({
     tag: 'main',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel: () => new Worker('./worker.js', { type: 'module' }),
 });
 

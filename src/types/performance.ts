@@ -21,7 +21,7 @@ export interface ConnectionEntry extends ContextBridgeMessage {
 }
 
 /** 调用指标 */
-export interface InvokeEntry extends ContextBridgeMessage {
+export interface InvokeEntry<T = any> extends ContextBridgeMessage {
     tag: string /** 上下文标识 */;
     entryType: 'invoke' /** 指标类型，表示函数调用 */;
     startTime: number /** 开始调用的时间戳，单位为毫秒 */;
@@ -29,12 +29,17 @@ export interface InvokeEntry extends ContextBridgeMessage {
     responseDuration: number /** 响应耗时 */;
     call: string /** 调用的函数名称 */;
     result: 'success' | 'failure' /** 调用结果 */;
-    /** 调用失败的原因，只在失败时存在 */
+
+    /** 发生错误时, 对错误信息进行记录 */
+    error?: JSONError;
     reason?:
         | 'timeout' /** 调用任务超时未完结 */
         | 'invoke cancelled' /** 调用任务被取消 */
         | 'message sending failed' /** 消息发送失败 */
         | 'function execution error' /** 函数执行报错 */
         | 'function not subscribed' /** 函数未被订阅 */;
-    error?: JSONError; // 发生错误时, 对错误信息进行记录
+
+    /** 调用失败时存在 return 或 throw 字段 */
+    return?: T;
+    throw?: any;
 }

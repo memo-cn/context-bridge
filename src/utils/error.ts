@@ -56,7 +56,13 @@ export type JSONError = {
 export function error2JSON(e: Error | any): JSONError {
     try {
         // 如果 e 是 Error 类型, 就直接用它, 否则用 e 创建一个新的 Error 对象
-        const err = (e as any) instanceof Error ? e : new Error(e as any);
+        let err: Error;
+        if ((e as any) instanceof Error) {
+            err = e;
+        } else {
+            err = new Error(e as any);
+            err.stack = '';
+        }
         // 返回一个包含错误属性的 JSON 对象
         return {
             name: String(err?.name),

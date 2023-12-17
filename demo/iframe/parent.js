@@ -1,8 +1,8 @@
-import { createContextBridge } from '../../dist/context-bridge.es.js';
+import { createContextBridge } from '../../dist/context-bridge.es.mjs';
 
 const parentBridge = createContextBridge({
     tag: 'main',
-    logLevel: 'verbose',
+    logLevel: 'log',
     createChannel() {
         const iframe = document.querySelector('iframe');
         const channel = {

@@ -6,13 +6,15 @@ import { MAX_TIMEOUT_VALUE } from './time';
  * 校验参数个数
  * @param args
  * @param count {number} 参数小于 count 个时抛出错误。
+ * @param language
  */
-export function checkArgumentsCount(args: IArguments, count: number) {
+export function checkArgumentsCount(args: IArguments, count: number, language: 'zh-CN' | 'en-US') {
     if (args.length < count) {
         throw new Error(
             zhOrEn(
                 `至少需要 ${count} 个参数, 但只传递了 ${args.length} 个。`,
                 `At least ${count} argument required, but only ${args.length} passed.`,
+                language,
             ),
         );
     }
@@ -23,15 +25,16 @@ export function checkArgumentsCount(args: IArguments, count: number) {
  * @param value
  * @param default_
  * @param literal
+ * @param language
  */
-export function checkStringArgument<T>(value: any, default_: T, literal: string) {
+export function checkStringArgument<T>(value: any, default_: T, literal: string, language: 'zh-CN' | 'en-US') {
     if (value === null || value === void 0) {
         return default_;
     } else if (typeof value === 'string') {
         return value;
     } else {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是字符串。`, `${literal}(${str(value)}) is not a string.`),
+            zhOrEn(`${literal}(${str(value)}) 不是字符串`, `${literal}(${str(value)}) is not a string`, language),
         );
     }
 }
@@ -41,8 +44,14 @@ export function checkStringArgument<T>(value: any, default_: T, literal: string)
  * @param value
  * @param default_ 默认值
  * @param literal 字面量
+ * @param language
  */
-export function checkBooleanArgument(value: any, default_: boolean, literal: string): boolean {
+export function checkBooleanArgument(
+    value: any,
+    default_: boolean,
+    literal: string,
+    language: 'zh-CN' | 'en-US',
+): boolean {
     if (value === null || value === void 0) {
         return default_;
     }
@@ -50,7 +59,7 @@ export function checkBooleanArgument(value: any, default_: boolean, literal: str
         return value;
     }
     throw new TypeError(
-        zhOrEn(`${literal}(${str(value)}) 不是布尔值。`, `${literal}(${str(value)}) is not a boolean.`),
+        zhOrEn(`${literal}(${str(value)}) 不是布尔值`, `${literal}(${str(value)}) is not a boolean`, language),
     );
 }
 
@@ -59,8 +68,9 @@ export function checkBooleanArgument(value: any, default_: boolean, literal: str
  * @param value 必须为对象, 否则抛出错误。
  * @param literal
  * @param optional 是否允许为 null 或 undefined, 默认否。
+ * @param language
  */
-export function checkObjectArgument(value: any, literal: string, optional = false) {
+export function checkObjectArgument(value: any, literal: string, optional: boolean, language: 'zh-CN' | 'en-US') {
     if (optional) {
         if (value === null || value === undefined) {
             return;
@@ -68,7 +78,7 @@ export function checkObjectArgument(value: any, literal: string, optional = fals
     }
     if (!isObject(value)) {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是对象。`, `${literal}(${str(value)}) is not a object.`),
+            zhOrEn(`${literal}(${str(value)}) 不是对象`, `${literal}(${str(value)}) is not a object`, language),
         );
     }
 }
@@ -78,8 +88,9 @@ export function checkObjectArgument(value: any, literal: string, optional = fals
  * @param value 必须为函数, 否则抛出错误。
  * @param literal
  * @param optional 是否允许为 null 或 undefined, 默认否。
+ * @param language
  */
-export function checkFunctionArgument(value: any, literal: string, optional = false) {
+export function checkFunctionArgument(value: any, literal: string, optional: boolean, language: 'zh-CN' | 'en-US') {
     if (optional) {
         if (value === null || value === undefined) {
             return;
@@ -87,7 +98,7 @@ export function checkFunctionArgument(value: any, literal: string, optional = fa
     }
     if (typeof value !== 'function') {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是函数。`, `${literal}(${str(value)}) is not a function.`),
+            zhOrEn(`${literal}(${str(value)}) 不是函数`, `${literal}(${str(value)}) is not a function`, language),
         );
     }
 }
@@ -97,8 +108,14 @@ export function checkFunctionArgument(value: any, literal: string, optional = fa
  * @param value
  * @param default_ 默认值
  * @param literal 字面量
+ * @param language
  */
-export function checkTimeoutArgument(value: any, default_: number, literal: string): number {
+export function checkTimeoutArgument(
+    value: any,
+    default_: number,
+    literal: string,
+    language: 'zh-CN' | 'en-US',
+): number {
     // 返回默认超时时间
     if (value === null || value === void 0) {
         return default_;
@@ -107,7 +124,7 @@ export function checkTimeoutArgument(value: any, default_: number, literal: stri
     // 非数值
     if (typeof value !== 'number') {
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不是数值。`, `${literal}(${str(value)}) is not a number.`),
+            zhOrEn(`${literal}(${str(value)}) 不是数值`, `${literal}(${str(value)}) is not a number`, language),
         );
     }
 
@@ -119,7 +136,11 @@ export function checkTimeoutArgument(value: any, default_: number, literal: stri
     if (value < 0) {
         // 负数
         throw new TypeError(
-            zhOrEn(`${literal}(${str(value)}) 不能为负数。`, `${literal}(${str(value)}) cannot be a negative number.`),
+            zhOrEn(
+                `${literal}(${str(value)}) 不能为负数`,
+                `${literal}(${str(value)}) cannot be a negative number`,
+                language,
+            ),
         );
     }
 
@@ -132,5 +153,5 @@ export function checkTimeoutArgument(value: any, default_: number, literal: stri
     }
 
     // 数值非法。
-    throw new TypeError(zhOrEn(`${literal}(${str(value)}) 非法。`, `${literal}(${str(value)}) is illegal.`));
+    throw new TypeError(zhOrEn(`${literal}(${str(value)}) 非法`, `${literal}(${str(value)}) is illegal`, language));
 }

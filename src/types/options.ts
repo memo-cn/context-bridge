@@ -2,12 +2,35 @@ import type { ContextBridgePerformanceEntry } from './performance';
 
 /** 日志级别 */
 export enum LogLevel {
-    /** 错误级别，只输出错误信息 */
+    /**
+     * 屏蔽日志
+     * 不输出任何日志
+     */
+    silent = 0,
+
+    /**
+     * 错误级别
+     * 只输出错误信息
+     */
     error = 1,
-    /** 警告级别，输出错误和警告信息 */
+
+    /**
+     * 警告级别
+     * 输出错误和警告信息
+     */
     warning = 2,
-    /** 详细级别，输出所有信息 */
-    verbose = 4,
+
+    /**
+     * 普通级别
+     * 输出详细信息，包括调用信息
+     */
+    log = 4,
+
+    /**
+     * 调试级别
+     * 输出所有信息，包括最底层的消息
+     */
+    debug = 5,
 }
 
 /**
@@ -62,6 +85,12 @@ export type ChannelState = 'connecting' /** 连接中 */ | 'open' /** 已打开 
 /** 上下文桥 选项 */
 export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeChannel> = {
     /**
+     * **语言**
+     * @description 语言。主要决定日志提示的语言。默认从运行环境自动选择。可设定为 'zh-CN' 或 'en-US' 。
+     */
+    language?: 'zh-CN' | 'en-US' | null;
+
+    /**
      * **上下文标识**
      * @description 在控制台打印的日志会带有上下文标识的前缀和颜色，以便区分不同的上下文桥实例。
      */
@@ -77,7 +106,7 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeC
 
     /**
      * **日志级别**
-     * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'verbose' | 'warning' | 'error' 。
+     * @description 低于设定级别的日志不会在控制台打印。默认为 'warning'。可设定为 'silent' | 'error' | 'warning' | 'log' | 'debug' 。
      */
     logLevel?: keyof typeof LogLevel;
 
@@ -91,9 +120,10 @@ export type ContextBridgeOptions<C extends ContextBridgeChannel = ContextBridgeC
     /**
      * **信道关闭时的回调函数**
      * @param channel 旧的信道实例
+     * @param reason 表示关闭的原因。
      * @description 此函数会在信道关闭或重启时调用。你可以用它来释放或清理资源。
      */
-    onChannelClose?: (channel: C) => void;
+    onChannelClose?: (channel: C, reason: string) => void;
 
     /**
      * **信道状态发生改变的回调函数**

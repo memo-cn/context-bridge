@@ -1,4 +1,14 @@
-# 进阶技巧
+# 实用技巧
+
+## 回环测试
+
+可以直接将 window 作为信道, 创建上下文桥, 进行回环测试。
+
+```typescript
+var bridge = createContextBridge({
+    createChannel: () => window,
+});
+```
 
 ## 负载均衡
 

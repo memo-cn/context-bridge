@@ -1,4 +1,4 @@
-const { createContextBridge } = require('../../dist/context-bridge.common.js');
+const { createContextBridge } = require('../../dist/context-bridge.common.cjs');
 
 process.on('uncaughtException', (err) => {
     console.error(err);
@@ -17,9 +17,9 @@ function startServer() {
 
     webSocketServer.on('connection', function (ws, incomingMessage) {
         const serverBridge = createContextBridge({
-            logLevel: 'verbose',
+            logLevel: 'log',
             tag: 'server',
-            reloadChannelOnConnectionTimeout: false,
+            reloadChannelOnConnectionFailure: false,
             reloadChannelOnInvokeTimeout: false,
             createChannel: () => createChannelFromWebSocket(ws),
         });
@@ -64,9 +64,9 @@ function startClient() {
 
     webSocketClient.onopen = async function () {
         const clientBridge = createContextBridge({
-            logLevel: 'verbose',
+            logLevel: 'log',
             tag: 'client',
-            reloadChannelOnConnectionTimeout: false,
+            reloadChannelOnConnectTimeout: false,
             reloadChannelOnInvokeTimeout: false,
             createChannel: () => createChannelFromWebSocket(webSocketClient),
 
