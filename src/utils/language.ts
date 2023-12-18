@@ -1,15 +1,19 @@
 // 环境默认语言
-export const envDefaultLanguage = (
-    String(
-        globalThis?.navigator?.language ||
-            (globalThis as any)?.process?.env?.LANG ||
-            (globalThis as any)?.process?.env?.LC_CTYPE,
-    )
-        .toLowerCase()
-        .includes('zh')
-        ? 'zh-CN'
-        : 'en-US'
-) as 'zh-CN' | 'en-US';
+export let envDefaultLanguage: 'zh-CN' | 'en-US' = 'en-US';
+
+try {
+    if (
+        String(
+            globalThis?.navigator?.language ||
+                (globalThis as any)?.process?.env?.LANG ||
+                (globalThis as any)?.process?.env?.LC_CTYPE,
+        )
+            .toLowerCase()
+            .includes('zh')
+    ) {
+        envDefaultLanguage = 'zh-CN';
+    }
+} catch (e) {}
 
 /**
  * 根据浏览器语言设置返回相应的字符串。

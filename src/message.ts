@@ -6,15 +6,15 @@ import { InvokeEntry } from './types';
 type Biz = undefined | string;
 const nsKey = '__context-bridge';
 
-function getMajorVersion(version: string) {
-    const ind = version.indexOf('.');
-    if (ind === -1) {
-        return version;
-    }
-    return version.slice(0, ind);
-}
+// function getMajorVersion(version: string) {
+//     const ind = version.indexOf('.');
+//     if (ind === -1) {
+//         return version;
+//     }
+//     return version.slice(0, ind);
+// }
 
-const majorVersion = getMajorVersion(version);
+// const majorVersion = getMajorVersion(version);
 
 // 上下文桥消息
 export type ContextBridgeMessage = {
