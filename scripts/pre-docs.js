@@ -3,22 +3,16 @@
 /* eslint-disable */
 const path = require('path');
 const fs = require('fs');
-const wd = __dirname;
-const from = path.resolve(wd, '../CHANGELOG.md');
 
 // 创建 Change Log 的链接
-link(from, path.resolve(wd, '../docs/zh-CN/CHANGELOG.md'));
-link(from, path.resolve(wd, '../docs/en-US/CHANGELOG.md'));
+link('../../CHANGELOG.md', path.resolve(__dirname, '../docs/zh-CN/CHANGELOG.md'));
+link('../../CHANGELOG.md', path.resolve(__dirname, '../docs/en-US/CHANGELOG.md'));
 
 function link(from, to) {
-    if (fs.existsSync(to)) {
-        const stat = fs.statSync(to);
-        if (stat.isSymbolicLink()) {
-            fs.unlinkSync(to);
-        } else {
-            console.error('无法创建链接到:', to);
-            return;
-        }
+    try {
+        fs.unlinkSync(to);
+    } catch (e) {
+
     }
     fs.symlinkSync(from, to);
 }
