@@ -11,8 +11,6 @@ link('../../CHANGELOG.md', path.resolve(__dirname, '../docs/en-US/CHANGELOG.md')
 function link(from, to) {
     try {
         fs.unlinkSync(to);
-    } catch (e) {
-
-    }
+    } catch (e) {}
     fs.symlinkSync(from, to);
 }
